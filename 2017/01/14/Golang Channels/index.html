@@ -45,9 +45,9 @@
     
     
     | 
-    <a href='/tags/golang/'>golang</a>,
+    <a href='/tags/channel/'>channel</a>,
     
-    <a href='/tags/channel/'>channel</a>
+    <a href='/tags/golang/'>golang</a>
     
     
 </span>
@@ -59,7 +59,7 @@
 <h2 id="概念与语法"><a href="#概念与语法" class="headerlink" title="概念与语法"></a>概念与语法</h2><h3 id="Channel介绍"><a href="#Channel介绍" class="headerlink" title="Channel介绍"></a>Channel介绍</h3><p>Channel可以看作是程序内部的FIFO消息队列。使用Channel的目的是传输值，具体是指，在不同的goroutines之间传递值的所属。良好设计的代码应该保证在任何时刻任何值只属于最多一个goroutine。正确地使用channels，可以避免goroutine之间的数据竞争。</p>
 <h3 id="Channel-类型和取值"><a href="#Channel-类型和取值" class="headerlink" title="Channel 类型和取值"></a>Channel 类型和取值</h3><p>Channel是组合类型。类似数组，切片和map，channel的具体类型由元素类型决定。所有要发送到channel的数据类型必须与元素类型一致。例如，如果元素类型是<code>string</code>，那么channel的类型就是<code>chan string</code>。</p>
 <p>Channel是有方向的。假设有类型<code>T</code>，那么<code>chan T</code>就是双向channel类型。对于双向channel，编译器允许从中收发数据。<code>chan&lt;- T</code>是单向发送channel类型。编译器不允许从中接收数据。<code>&lt;-chan T</code>是单向接收channel类型。编译器不允许向其发送数据。</p>
-<p>双向channel类型<code>chan T</code>的值可以赋给单向发送类型<code>chan&lt;- T</code>，也可以赋给单向接收类型<code>&lt;-chan T</code>。</p>
+<p>双向channel类型<code>chan T</code>的值可以赋给单向发送类型<code>chan&lt;- T</code>的变量，也可以赋给单向接收类型<code>&lt;-chan T</code>的变量。</p>
 <p>Channel类型的零值由<code>nil</code>表示。非零channel必须由内置函数<code>make</code>创建。例如，<code>make(chan int, 10)</code>将会创建元素类型是<code>int</code>的channel。函数<code>make</code>的第二个参数表示新建channel的缓冲区大小（见下节）。该参数可选，默认值0。</p>
 <p>Channel缓冲区大小经常称为channel的容量。零容量的channel称为阻塞channel，非零容量的channel称为缓冲channel。</p>
 <h3 id="Channel内部结构"><a href="#Channel内部结构" class="headerlink" title="Channel内部结构"></a>Channel内部结构</h3><p>每个channel维护3个队列：</p>
@@ -72,7 +72,7 @@
 <h3 id="Channel操作"><a href="#Channel操作" class="headerlink" title="Channel操作"></a>Channel操作</h3><p>Channel（假设是<code>ch</code>）可以执行下面的操作：</p>
 <ul>
 <li>调用内置函数<code>cap(ch)</code>获取值缓冲队列容量。</li>
-<li>调用内置函数<code>len(ch)</code>获取值缓冲队列大小。这个函数中看不中用。</li>
+<li>调用内置函数<code>len(ch)</code>获取值缓冲队列大小。这个函数没有看起来那么有用，实践中很少使用。</li>
 <li>调用内置函数<code>close(ch)</code>关闭channel。非零channel只能关闭一次。在运行时关闭已经关闭的或者<code>nil</code>channel出现panic。请注意，在Golang中关闭单向接收channel是非法的，无法编译。</li>
 <li>通过这种形式<code>ch &lt;- v</code>发送值<code>v</code>。取决于channel的状态，发送操作的结果可能是成功发送值到channel，阻塞发送goroutine，或者发送goroutine出现panic（见下文channel规则）。</li>
 <li>通过这种形式<code>v, ok = &lt;- ch</code>接收（获取）值，其中第二个值<code>ok</code>是可选的，用于表明值<code>v</code>是否是channel关闭之前发送的。取决于channel的状态，接收结果可能是成功从channel中接收值，或者阻塞接收goroutine。接收操作永远不会导致接收goroutine出现panic（细节见下文channel规则）。</li>
