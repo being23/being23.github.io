@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>mahout推荐源码阅读笔记1 | being23</title>
+  <meta name="description" content="写给未来的自己" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="being23">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">being23</h1>
+            <h2 class="blog-description">写给未来的自己</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2014-07-25T16:41:00.000Z" itemprop="datePublished">
+          2014-07-26
+      </time>
+    
+    
+    | 
+    <a href='/tags/mahout/'>mahout</a>,
+    
+    <a href='/tags/recommendation/'>recommendation</a>
+    
+    
+</span>
+    <h1 class="post-title">mahout推荐源码阅读笔记1</h1>
+    <section class="post-content">
+      <p>mahout在计算推荐结果的过程中会先后启动9个MR任务，这些job的具体执行流程如下图：</p>
+<p><img src="recommendation_workflow.png" alt="recommendation_workflow"></p>
+<p>其中分成四个部分（3，4两步其实是在同一个job中）</p>
+<ol>
+<li>PreparePreferenceMatrixJob —— 将itemid转成内部index；计算用户向量；计算评价矩阵</li>
+<li>RowSimilarityJob —— 计算每个用户的物品数目；向量归一化；计算相似度；计算协同矩阵</li>
+<li>partialMultiply —— 整合用户向量、评分向量与协同向量</li>
+<li>RecommenderJob —— 计算推荐向量</li>
+</ol>
+<p>在逐个介绍每个job之前，先看下他们的父类<code>AbstractJob</code>，这个类定义了方法<code>addOption</code>，<code>parseArguments</code>，<code>getOption</code>，<code>prepareJob</code>等，用来定义选项，参数解析和设置以及配置job，同时实现了<code>Tool</code>接口，所以重点关注每个子类的<code>run</code>方法。</p>
+<p>mahout推荐从<code>RecommenderJob</code>开始，在<code>run</code>方法中，开始是一系列的选项定义及设置，之后就是流程中的第一部分 —— 通过<code>ToolRunner</code>的<code>run</code>方法执行<code>PreparePreferenceMatrixJob</code>。</p>
+<pre><code>ToolRunner.run(getConf(), new PreparePreferenceMatrixJob(), new String[]{
+    &quot;--input&quot;, getInputPath().toString(),
+    &quot;--output&quot;, prepPath.toString(),
+    &quot;--minPrefsPerUser&quot;, String.valueOf(minPrefsPerUser),
+    &quot;--booleanData&quot;, String.valueOf(booleanData),
+    &quot;--tempDir&quot;, getTempPath().toString(),
+});
+</code></pre><p>这里指定了输入目录（对应命令行选项<code>--input</code>），输出目录（临时目录的子目录<code>preparePreferenceMatrix</code>），每个用户对应的最少物品数，是否是boolean数据以及临时目录（对应命令行选项<code>--tempDir</code>）。</p>
+<hr>
+<h2 id="1-PreparePreferenceMatrixJob"><a href="#1-PreparePreferenceMatrixJob" class="headerlink" title="1. PreparePreferenceMatrixJob"></a>1. PreparePreferenceMatrixJob</h2><p><code>PreparePreferenceMatrixJob</code>同样继承自<code>AbstractJob</code>，在<code>run</code>方法中，也是类似的选项定义和设置。接下来主要是3个<code>prepareJob</code>方法，他们分别指定了将itemid转成内部index、计算用户向量、计算评价矩阵所需的MR任务，同时还有各自的输入输出目录和文件格式，key、value类型。</p>
+<h3 id="1-1-itemid转成内部index"><a href="#1-1-itemid转成内部index" class="headerlink" title="1.1. itemid转成内部index"></a>1.1. itemid转成内部index</h3><p>第一个<code>prepareJob</code>方法如下：</p>
+<pre><code>//convert items to an internal index
+Job itemIDIndex = prepareJob(getInputPath(), getOutputPath(ITEMID_INDEX), TextInputFormat.class,
+        ItemIDIndexMapper.class, VarIntWritable.class, VarLongWritable.class, ItemIDIndexReducer.class,
+        VarIntWritable.class, VarLongWritable.class, SequenceFileOutputFormat.class);
+</code></pre><p>输入目录通过命令行选项<code>--input</code>指定，输出目录是<code>preparePreferenceMatrix</code>的子目录<code>itemIDIndex</code>。这里，mapper和reducer分别是<code>ItemIDIndexMapper</code>和<code>ItemIDIndexReducer</code>。   </p>
+<p>mapper的输出输出分别是</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">输入</th>
+<th style="text-align:left">输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">userid itemid prefval分隔字符串</td>
+<td style="text-align:left">index-&gt;itemid</td>
+</tr>
+</tbody>
+</table>
+<p><code>map</code>方法如下：</p>
+<pre><code>protected void map(LongWritable key,
+                     Text value,
+                     Context context) throws IOException, InterruptedException {
+    String[] tokens = TasteHadoopUtils.splitPrefTokens(value.toString());
+    long itemID = Long.parseLong(tokens[transpose ? 0 : 1]);
+    int index = TasteHadoopUtils.idToIndex(itemID);
+    indexWritable.set(index);
+    itemIDWritable.set(itemID);
+    context.write(indexWritable, itemIDWritable);
+}
+</code></pre><p>调用工具类<code>TasteHadoopUtils</code>的方法<code>splitPrefTokens</code>读取三元组(userid itemid prefval)到字符数组<code>token</code>中，支持的分割符是<code>\t</code>和<code>,</code>。<code>transpose</code>是处理userid和itemid次序相反的情形。紧接着调用方法<code>idToIndex</code>将itemid转成内部index，该方法内部执行<code>0x7FFFFFFF &amp; Longs.hashCode(id) % 0x7FFFFFFE</code>。</p>
+<p>reducer的输入输出分别是</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">输入</th>
+<th style="text-align:left">输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">index-&gt;itemid</td>
+<td style="text-align:left">index-&gt;itemid</td>
+</tr>
+</tbody>
+</table>
+<p><code>reduce</code>方法如下：</p>
+<pre><code>protected void reduce(VarIntWritable index,
+                    Iterable&lt;VarLongWritable&gt; possibleItemIDs,
+                    Context context) throws IOException, InterruptedException {
+    long minimumItemID = Long.MAX_VALUE;
+    for (VarLongWritable varLongWritable : possibleItemIDs) {
+      long itemID = varLongWritable.get();
+      if (itemID &lt; minimumItemID) {
+        minimumItemID = itemID;
+      }
+    }
+    if (minimumItemID != Long.MAX_VALUE) {
+      minimumItemIDWritable.set(minimumItemID);
+      context.write(index, minimumItemIDWritable);
+    }
+}
+</code></pre><p><strong>一个index对应不同的itemid，为什么取最小值</strong></p>
+<p>由于测试数据中itemid都可以用int类型表示，所以index与itemid是一致的，后面就不再区分index和itemid，统一表示成itemid。这一点可以通过输出结果看到：</p>
+<pre><code>[root@datanode1 bin]#  hadoop fs -libjars ../examples/target/mahout-examples-0.9-job.jar -text /theme/temp/0715/preparePreferenceMatrix/itemIDIndex/part-r-00000
+Warning: $HADOOP_HOME is deprecated.
+
+101     101
+102     102
+103     103
+104     104
+105     105
+106     106
+107     107
+</code></pre><blockquote>
+<p><strong>注意</strong>：在生产环境下，数据是从hive中导出的，由于hive指定自定义分隔符报错，只能使用默认分割符<code>\001</code>，所以需要修改工具类<code>TasteHadoopUtils</code>的分隔符正则表达式为<code>Pattern.compile(&quot;[\t,\001]&quot;)</code></p>
+</blockquote>
+<h3 id="1-2-计算用户向量"><a href="#1-2-计算用户向量" class="headerlink" title="1.2 计算用户向量"></a>1.2 计算用户向量</h3><p>继续第二个<code>prepareJob</code>方法：</p>
+<pre><code>//convert user preferences into a vector per user
+Job toUserVectors = prepareJob(getInputPath(),
+                               getOutputPath(USER_VECTORS),
+                               TextInputFormat.class,
+                               ToItemPrefsMapper.class,
+                               VarLongWritable.class,
+                               booleanData ? VarLongWritable.class : EntityPrefWritable.class,
+                               ToUserVectorsReducer.class,
+                               VarLongWritable.class,
+                               VectorWritable.class,
+                               SequenceFileOutputFormat.class);
+</code></pre><p>输入目录通过选项<code>--input</code>指定，输出目录是子目录<code>userVectors</code>。mapper和reducer分别是<code>ToItemPrefsMapper</code>和<code>ToUserVectorsReducer</code>。其中，<code>ToItemPrefsMapper</code>继承自<code>ToEntityPrefsMapper</code>，自身没有实现map方法，只能看父类的实现。</p>
+<p>mapper输入输出</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">输入</th>
+<th style="text-align:left">输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">userid itemid prefval带有分隔符字符串</td>
+<td style="text-align:left">userid-&gt;(itemid,prefval)或者userid-&gt;itemid</td>
+</tr>
+</tbody>
+</table>
+<pre><code>public void map(LongWritable key,
+                  Text value,
+                  Context context) throws IOException, InterruptedException {
+    String[] tokens = DELIMITER.split(value.toString());
+    long userID = Long.parseLong(tokens[0]);
+    long itemID = Long.parseLong(tokens[1]);
+    if (itemKey ^ transpose) {
+      // If using items as keys, and not transposing items and users, then users are items!
+      // Or if not using items as keys (users are, as usual), but transposing items and users,
+      // then users are items! Confused?
+      long temp = userID;
+      userID = itemID;
+      itemID = temp;
+    }
+    if (booleanData) {
+      context.write(new VarLongWritable(userID), new VarLongWritable(itemID));
+    } else {
+      float prefValue = 0;
+      prefValue = tokens.length &gt; 2 ? Float.parseFloat(tokens[2]) + ratingShift : 1.0f;
+      context.write(new VarLongWritable(userID), new EntityPrefWritable(itemID, prefValue));
+    }
+}
+</code></pre><p>首先解析出<code>userID</code>和<code>itemID</code>，如果要支持自定义的分隔符，修改相应的正则表达式。<code>transpose</code>用来处理<code>itemid</code>和<code>userid</code>位置交换的情形。接下来判断如果是boolean数据，不做额外处理；否则尝试获取评分，如果能够获取到，即字符串<code>token</code>长度超过2，取<code>prefval+ratingshift</code>，否则给默认值1.0f。</p>
+<p><strong><code>ratingShift</code>有什么作用，默认值给0</strong></p>
+<p>Reducer的输入输出</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">输入</th>
+<th style="text-align:left">输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">userid-&gt;(itemid,prefval)或者userid-&gt;itemid</td>
+<td style="text-align:left">userid-&gt;(itemid, prefval)</td>
+</tr>
+</tbody>
+</table>
+<pre><code>protected void reduce(VarLongWritable userID,
+                        Iterable&lt;VarLongWritable&gt; itemPrefs,
+                        Context context) throws IOException, InterruptedException {
+    Vector userVector = new RandomAccessSparseVector(Integer.MAX_VALUE, 100);
+    for (VarLongWritable itemPref : itemPrefs) {
+      int index = TasteHadoopUtils.idToIndex(itemPref.get());
+      float value = itemPref instanceof EntityPrefWritable ? ((EntityPrefWritable) itemPref).getPrefValue() : 1.0f;
+      userVector.set(index, value);
+    }
+
+    if (userVector.getNumNondefaultElements() &gt;= minPreferences) {
+      userVectorWritable.set(userVector);
+      userVectorWritable.setWritesLaxPrecision(true);
+      context.getCounter(Counters.USERS).increment(1);
+      context.write(userID, userVectorWritable);
+    }
+}
+</code></pre><p><code>EntityPrefWritable</code>继承自<code>VarLongWritable</code>，使用<code>instanceof</code>做类型判断，如果是前者，转换后调用<code>getPrefValues()</code>方法来获取评分，后者的情况，评分给1.0f。接下来判断用户评价过的item数目是否超过<code>minPreferences</code>，这个参数就是<code>RecommenderJob</code>中指定的选项<code>minPrefsPerUser</code>，默认为1。</p>
+<p>同样的，检查下这一步的输出：</p>
+<pre><code>[root@datanode1 bin]#  hadoop fs -libjars ../examples/target/mahout-examples-0.9-job.jar -text /theme/temp/0715/preparePreferenceMatrix/userVectors/part-r-00000
+Warning: $HADOOP_HOME is deprecated.
+
+1       {101:5.0,103:2.5,102:3.0}
+2       {102:2.5,103:5.0,101:2.0,104:2.0}
+3       {107:5.0,105:4.5,101:2.5,104:4.0}
+4       {103:3.0,106:4.0,101:5.0,104:4.5}
+5       {106:4.0,104:4.0,103:2.0,105:3.5,101:4.0,102:3.0}
+</code></pre><h3 id="1-3-计算评价矩阵"><a href="#1-3-计算评价矩阵" class="headerlink" title="1.3 计算评价矩阵"></a>1.3 计算评价矩阵</h3><p>第三个<code>prepareJob</code>如下：</p>
+<pre><code>//build the rating matrix
+Job toItemVectors = prepareJob(getOutputPath(USER_VECTORS), getOutputPath(RATING_MATRIX),
+        ToItemVectorsMapper.class, IntWritable.class, VectorWritable.class, ToItemVectorsReducer.class,
+        IntWritable.class, VectorWritable.class);
+toItemVectors.setCombinerClass(ToItemVectorsReducer.class);
+</code></pre><p>输入目录是上一步的输出目录<code>userVectors</code>，输出子目录<code>ratingMatrix</code>。mapper和reducer分别是<code>ToItemVectorsMapper</code>和<code>ToItemVectorsReducer</code>。</p>
+<p>mapper的输入输出</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">输入</th>
+<th style="text-align:left">输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">userid-&gt;(itemid, prefval)</td>
+<td style="text-align:left">itemid-&gt;(userid, prefval)</td>
+</tr>
+</tbody>
+</table>
+<pre><code>protected void map(VarLongWritable rowIndex, VectorWritable vectorWritable, Context ctx)
+    throws IOException, InterruptedException {
+    Vector userRatings = vectorWritable.get();
+
+    int column = TasteHadoopUtils.idToIndex(rowIndex.get());
+
+    itemVectorWritable.setWritesLaxPrecision(true);
+
+    Vector itemVector = new RandomAccessSparseVector(Integer.MAX_VALUE, 1);
+    for (Vector.Element elem : userRatings.nonZeroes()) {
+      itemID.set(elem.index());
+      itemVector.setQuick(column, elem.get());
+      itemVectorWritable.set(itemVector);
+      ctx.write(itemID, itemVectorWritable);
+      // reset vector for reuse
+      itemVector.setQuick(elem.index(), 0.0);
+    }
+}
+</code></pre><p>将<code>rowIndex</code>其实就是<code>userID</code>做一次转换，保存到<code>column</code>。<em>这里多说一句，在mahout中，row对应item，column对应user。</em>接下来遍历向量，itemid作为key，value是vector类型，其中索引是userid，值为prefval。</p>
+<p><strong><code>itemVector.setQuick(elem.index(), 0.0)</code>注释是重用，那么索引为什么给的是<code>elem.index()</code>，而非<code>column</code>。</strong></p>
+<p>Reducer的输入输出</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">输入</th>
+<th style="text-align:left">输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">index-&gt;(index4userid,prefval)</td>
+<td style="text-align:left">index-&gt;(index4userid,prefval)</td>
+</tr>
+</tbody>
+</table>
+<pre><code>protected void reduce(IntWritable row, Iterable&lt;VectorWritable&gt; vectors, Context ctx)
+    throws IOException, InterruptedException {
+
+    merged.setWritesLaxPrecision(true);
+    merged.set(VectorWritable.mergeToVector(vectors.iterator()));
+    ctx.write(row, merged);
+}
+</code></pre><p>调用方法<code>mergeToVector</code>，将一组小向量合并成完整向量。例如101-&gt;(2:2.0) 101-&gt;(5:4.0)合并之后就是101-&gt;(2:2.0, 5:4.0)。</p>
+<p>这一过程的最终结果：</p>
+<pre><code>[root@datanode1 bin]#  hadoop fs -libjars ../examples/target/mahout-examples-0.9-job.jar -text /theme/temp/0715/preparePreferenceMatrix/ratingMatrix/part-r-00000
+Warning: $HADOOP_HOME is deprecated.
+
+101     {2:2.0,5:4.0,3:2.5,1:5.0,4:5.0}
+102     {1:3.0,5:3.0,2:2.5}
+103     {2:5.0,5:2.0,1:2.5,4:3.0}
+104     {2:2.0,5:4.0,3:4.0,4:4.5}
+105     {5:3.5,3:4.5}
+106     {5:4.0,4:4.0}
+107     {3:5.0}
+</code></pre><p>至此，<code>PreparePreferenceMatrixJob</code>部分就说完了，接下来说下相似度计算<code>RowSimilarityJob</code>。</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>范海强</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2014/07/26/mahout推荐源码阅读笔记1/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2014/07/26/mahout推荐源码阅读笔记1/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2014/07/26/mahout推荐源码阅读笔记1/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2014/07/26/mahout推荐源码阅读笔记2/">
+        ← mahout推荐源码阅读笔记2
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2014/07/23/mahout推荐源码阅读笔记0/">
+        mahout推荐源码阅读笔记0 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2014/07/26/mahout推荐源码阅读笔记1/" data-title="mahout推荐源码阅读笔记1" data-url="http://yoursite.com/2014/07/26/mahout推荐源码阅读笔记1/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">being23</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

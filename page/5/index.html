@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>being23</title>
+  <meta name="description" content="写给未来的自己" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="being23">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="home-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">being23</h1>
+            <h2 class="blog-description">写给未来的自己</h2>
+        </div>
+    </div>
+</header>
+  
+<main class="content" role="main">
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2014-03-10T12:44:21.000Z" itemprop="datePublished">
+          Mar 10 2014
+      </time>
+    
+    
+    | 
+    <a href='/tags/gdb/'>gdb</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2014/03/10/gdb查看core文件/">gdb查看core文件</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        嗯，有一阵子没写日志了。
+曾经有很长一段时间，其实也就是今天之前啦，在用gdb调试core文件时，仅限于通过bt查看下崩溃时的堆栈。这两天，服务常常挂掉，查看堆栈发现是rapidjson在解析时断言失败导致的。于是想要查看接收到消息，以前的做法是，把消息记录到日志中，之后再根据崩溃的时间点去日志中找（掩面）。之前也有想过，既然core文件中记录了调用堆栈，那么记录调用时参数的值，也是合情合理的啊。
+今天在网上找了些资料，算是大概弄明白了
+      
+      </p>
+      
+      <p>
+          <a href="/2014/03/10/gdb查看core文件/" class="excerpt-link">Read More...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2014-01-19T09:23:45.000Z" itemprop="datePublished">
+          Jan 19 2014
+      </time>
+    
+    
+    | 
+    <a href='/tags/C/'>C++</a>,
+    
+    <a href='/tags/libevhtp/'>libevhtp</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2014/01/19/libevhtp使用小记/">libevhtp使用小记</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        半个月前，上线一个收集服务，启动不了，发现是端口被占用。进一步检查后，发现大量的连接处于 TIME_WAIT 状态，大致如下
+ Total: 13420 (kernel 14354)
+ TCP:   90360 (estab 13061, closed 69056, orphaned 8192, synrecv 0, timewait 69051/0), ports 40510
+
+ Transport Total     IP     
+      
+      </p>
+      
+      <p>
+          <a href="/2014/01/19/libevhtp使用小记/" class="excerpt-link">Read More...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2013-12-08T10:40:03.000Z" itemprop="datePublished">
+          Dec 8 2013
+      </time>
+    
+    
+    | 
+    <a href='/tags/go/'>go</a>,
+    
+    <a href='/tags/channel/'>channel</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2013/12/08/（译）Golang channels简介/">（译）Golang channels简介</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        原文 Golang channels tutorial
+作者 GUZ ALEXANDER
+
+Golang channels
+Golag内建有对并发程序的支持。在函数调用的前面放置一个go语句，就会在调用代码地址空间的独立并发线程中执行函数。这种线程在go语言中称为goroutine。这里要注意的是并发并非总是表示并行。goroutines是创建并发程序的一种方式，这些程序在硬件允许的条件下可以并行的执行。并发与并行的话题有一个详细的介绍
+      
+      </p>
+      
+      <p>
+          <a href="/2013/12/08/（译）Golang channels简介/" class="excerpt-link">Read More...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2013-10-03T08:15:03.000Z" itemprop="datePublished">
+          Oct 3 2013
+      </time>
+    
+    
+    | 
+    <a href='/tags/go/'>go</a>,
+    
+    <a href='/tags/json/'>json</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2013/10/03/（译）JSON与Go/">（译）JSON与Go</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        翻译自 JSON and Go
+
+介绍
+JSON(JavaScript Object Notation)是一种简单的数据交换格式。从语法上来说，它综合了JavaScript的对象(objects)和列表(lists)。通常用于在web后端和运行在浏览器中的JavaScript程序之间通信，不过也可以用在很多其他的地方。官方主页，json.org，提供了对标准的详尽说明。
+使用json 包可以轻松地在Go程序中读写JSON数据
+编码
+
+通
+      
+      </p>
+      
+      <p>
+          <a href="/2013/10/03/（译）JSON与Go/" class="excerpt-link">Read More...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <article class="post">
+    <header class="post-header">
+      <span class="post-meta">
+      <time datetime="2013-10-02T16:33:44.000Z" itemprop="datePublished">
+          Oct 3 2013
+      </time>
+    
+    
+    | 
+    <a href='/tags/go/'>go</a>,
+    
+    <a href='/tags/error/'>error</a>
+    
+    
+</span>
+      <h2 class="post-title"><a href="/2013/10/03/（译）Go错误处理/">（译）Go错误处理</a></h2>
+    </header>
+    <section class="post-excerpt">
+      <p>
+      
+        Go的官方博客有很多的干货，这篇文章Error handling and Go说明了Go错误处理的一些小技巧。
+
+介绍
+如果你折腾过一阵子Go语言，那么可能已经见到过了内置的error类型。Go语言中使用error类型来表示错误状态。例如，函数os.open在打开文件失败时，会返回一个non-nil的error值。
+func Open(name string) (file *File, err error)
+下面的代码调用os.Open
+      
+      </p>
+      
+      <p>
+          <a href="/2013/10/03/（译）Go错误处理/" class="excerpt-link">Read More...</a>
+      </p>
+      
+    </section>
+  </article>
+  
+  <nav class="pagination" role="pagination">
+    <a class="newer-posts" href="/page/4/">← Newer Posts</a>
+    <span class="page-number">Page 5 of 6</span>
+    <a class="older-posts" href="/page/6/">Older Posts →</a>
+  </nav>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">being23</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

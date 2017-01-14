@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>kafka 协议阅读笔记 | Hexo</title>
+  <meta name="description" content="" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="Hexo">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">Hexo</h1>
+            <h2 class="blog-description"></h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2014-04-11T11:08:08.000Z" itemprop="datePublished">
+          2014-04-11
+      </time>
+    
+    
+    | 
+    <a href='/tags/kafka/'>kafka</a>
+    
+    
+</span>
+    <h1 class="post-title">kafka 协议阅读笔记</h1>
+    <section class="post-content">
+      <p>最近看kafka c++客户端<a href="https://github.com/edenhill/librdkafka" target="_blank" rel="external">librdkafka</a>源码，看到消息生产部分，了解了下kafka的协议设计，<a href="https://cwiki.apache.org/confluence/display/KAFKA/A+Guide+To+The+Kafka+Protocol" target="_blank" rel="external">A Guide To The Kafka Protocol</a>，做了些笔记。</p>
+<hr>
+<h2 id="overiew"><a href="#overiew" class="headerlink" title="overiew"></a>overiew</h2><ol>
+<li>Metadata —— 描述当前可用brokers，它们的host和port信息，以及broker持有的partions</li>
+<li>Send      —— 向broker发送消息</li>
+<li>Fetch     —— 从broker获取消息，数据、集群元数据和topic offset信息</li>
+<li>Offsets     —— 获取指定topic partition可用offset信息</li>
+<li>Offset Commit —— 确认一个consumer group的offset集合</li>
+<li>Offset Fetch ——     获取一个consumer group的offset集合</li>
+</ol>
+<h2 id="Preliminaries"><a href="#Preliminaries" class="headerlink" title="Preliminaries"></a>Preliminaries</h2><h3 id="网络"><a href="#网络" class="headerlink" title="网络"></a>网络</h3><p>kafka协议是TCP上的二进制协议。请求响应对。大小指定。链接建立和断开不要求握手机制。客户端需要维持到多个broker的链接，因为数据分区放在了不同的broker上。某个客户端没必要维持到broker的多个连接。</p>
+<p>server保证单个TCP链接上的请求响应是有序的。</p>
+<p>request是大小受限的，超过限制的请求会导致socket断开。</p>
+<h3 id="分区与bootstrapping"><a href="#分区与bootstrapping" class="headerlink" title="分区与bootstrapping"></a>分区与bootstrapping</h3><p>topic被分到数目预先设置的partition，每个partition根据复制系数N进行复制。topic partition 以 0,1,…,P 编号。</p>
+<p>客户端控制数据发送到哪个partition。</p>
+<p>数据发送和获取请求必须发给作为指定partition leader的broker。</p>
+<p>所有的kafka broker都能响应metadata请求：有哪些主题，这些主题有哪些分区，这些分区的leader broker是谁以及这些broker的host 和port信息是什么。</p>
+<p>客户端没必要轮询集群是否有变化；一直获取后缓存元数据直到发生错误暗示元数据过期：1）无法跟指定broker通信的socket错误；2）某个请求响应错误代码暗示当前borker不再持有请求数据的分区</p>
+<ol>
+<li>遍历”bootstrap” kafka url 列表，直到找到可以连接的。获取集群metadata</li>
+<li>处理 fetch或者produce请求，根据发送或者获取的主题分区访问相应的broker</li>
+<li>如果发生错误，刷新元数据并重试</li>
+</ol>
+<blockquote>
+<p>librdkafka 还是会定时刷新元数据</p>
+</blockquote>
+<h3 id="分区策略"><a href="#分区策略" class="headerlink" title="分区策略"></a>分区策略</h3><p>kafka中进行数据分区有两个作用：</p>
+<ol>
+<li>在brokers中间平衡数据和请求负载</li>
+<li>It serves as a way to divvy up processing among consumer processes while allowing local state and preserving order within the partition. We call this semantic partitioning. 语义分区</li>
+</ol>
+<p>在所有的broker中间对请求做round robin处理。如果producer数超过broker数，客户端随机选择partition。这种策略会带来更少的TCP链接。（为什么？）</p>
+<p>语义分区就是根据消息里的某个key来确定消息发送到哪个partition。</p>
+<h3 id="批处理"><a href="#批处理" class="headerlink" title="批处理"></a>批处理</h3><p>消息批处理可以跨越多个topic和partition，也就是说一个produce请求中可能包含发给多个partition的数据；一个fetch请求可能从多个partition中获取数据。</p>
+<h3 id="版本与兼容性"><a href="#版本与兼容性" class="headerlink" title="版本与兼容性"></a>版本与兼容性</h3><p>kafka协议是向后兼容的。 Our versioning is on a per-api basis, each version consisting of a request and response pair. （每个API都有版本？）每个请求包含API key用于指明使用的API，以及版本号指明请求格式和期望的响应格式。</p>
+<p>server会拒绝掉协议不支持的请求，响应是严格按照请求中所暗示的。</p>
+<h2 id="协议"><a href="#协议" class="headerlink" title="协议"></a>协议</h2><h3 id="协议基本类型"><a href="#协议基本类型" class="headerlink" title="协议基本类型"></a>协议基本类型</h3><p><em>固定宽度</em><br>int8, int16, int32, int64 —— 指定宽度的有符号数，以big endian order存储</p>
+<p><em>可变长度</em><br>bytes, string —— 这种类型由表示长度N的有符号整数以及N个字节的内容组成。长度-1表示null。string的长度类型是int16，bytes的长度类型是int32。</p>
+<p><em>数组</em><br>用于处理重复的结构。包含长度N，后续N个重复的structure，这些structure可以由其他的基本类型构成。</p>
+<h3 id="common-request-and-response-structure"><a href="#common-request-and-response-structure" class="headerlink" title="common request and response structure"></a>common request and response structure</h3><pre><code>RequestOrResponse =&gt; Size (RequestMessage | ResponseMessage)
+    Size =&gt; int32
+</code></pre><table>
+<thead>
+<tr>
+<th>域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MessageSize</td>
+<td>给出后续请求或者响应消息的大小，以字节为单位。</td>
+</tr>
+</tbody>
+</table>
+<pre><code>RequestMessage =&gt; ApiKey ApiVersion CorrelationId ClientId RequestMessage
+    ApiKey =&gt; int16
+    ApiVersion =&gt; int16
+    CorrelationId =&gt; int32
+    ClientId =&gt; string
+    RequestMessage =&gt; MetadataRequest | ProduceRequest | FetchRequest | OffsetRequest | OffsetCommitRequest | OffsetFetchRequest
+</code></pre><table>
+<thead>
+<tr>
+<th>域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ApiKey</td>
+<td>数值id表明正被调用的API（例如，元数据请求，produce请求，fetch请求等）</td>
+</tr>
+<tr>
+<td>ApiVersion</td>
+<td>api的数值version number。server根据版本号作出相应格式的回复</td>
+</tr>
+<tr>
+<td>CorrelationId</td>
+<td>用户提供的整数，server原样返回，用于在client和server之间匹配消息</td>
+</tr>
+<tr>
+<td>ClientId</td>
+<td>用户提供的客户端标识</td>
+</tr>
+</tbody>
+</table>
+<pre><code>Response =&gt; CorrelationId ResponseMessage
+    CorrelationId =&gt; int32
+    ResponseMessage =&gt; MetadataResponse | ProduceResponse | FetchResponse | OffsetResponse | OffsetCommitResponse | OffsetFetchResponse
+</code></pre><p>messageset 是带有offset和size信息的消息序列。This format happens to be used both for the on-disk storage on the broker and the on-the-wire format.message set 还是kafka中消息压缩的单位。MessageSets 跟其他数组元素不一样的地方在于开头不是表示长度的size域。</p>
+<pre><code>MessageSet =&gt; [Offset MessageSize Message]
+    Offset =&gt; int64
+    MessageSize =&gt; int32
+    Message =&gt; Crc MagicByte Attributes Key Value
+        Crc =&gt; int32
+        MagicByte =&gt; int8
+        Attributes =&gt; int8
+        Key =&gt; bytes
+        Value =&gt; bytes
+</code></pre><table>
+<thead>
+<tr>
+<th>域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Offset</td>
+<td>在kafka中是作为 log sequence number。当producer发送消息的时候，它并不知道offset，可以填充任何值</td>
+</tr>
+<tr>
+<td>Crc</td>
+<td>后续的消息bytes的CRC32，用于校验broker和consumer中消息的完整性</td>
+</tr>
+<tr>
+<td>MagicByte</td>
+<td>用于向后兼容的version id</td>
+</tr>
+<tr>
+<td>Attributes</td>
+<td>存放消息的元数据属性的字节。最低两位表示消息的压缩编码。其他置零。</td>
+</tr>
+<tr>
+<td>Value</td>
+<td>实际的消息内容，以opaque byte 数组的形式。</td>
+</tr>
+<tr>
+<td>Key</td>
+<td>可选的message key用于partition。可以为null</td>
+</tr>
+</tbody>
+</table>
+<p>kafaka压缩的不是单条message而是message set。</p>
+<table>
+<thead>
+<tr>
+<th>Compression</th>
+<th>Codec</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>None</td>
+<td>0</td>
+</tr>
+<tr>
+<td>GZIP</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Snappy</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="The-APIS"><a href="#The-APIS" class="headerlink" title="The APIS"></a>The APIS</h2><h3 id="Metadata-API"><a href="#Metadata-API" class="headerlink" title="Metadata API"></a>Metadata API</h3><ol>
+<li>存在哪些topic</li>
+<li>每个topic有多少partition</li>
+<li>每个partition的leader是那个broker</li>
+<li>每个broker的host和port 是什么</li>
+</ol>
+<p>这是唯一一个可以发给集群中的任意broker的请求。</p>
+<p>client可以只请求部分topic的元数据。</p>
+<p>返回的元数据是partition级别的，按topic分组。对于每个partition，元数据包含 leader信息，所有的replicas以及当前处于 in-sync 状态的replicas列表。</p>
+<pre><code>MetadataRequest =&gt; [TopicName]
+      TopicName =&gt; string
+</code></pre><table>
+<thead>
+<tr>
+<th>域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TopicName</td>
+<td>请求指定topic的元数据。如果为空产生所topic的元数据</td>
+</tr>
+</tbody>
+</table>
+<pre><code>MetadataResponse =&gt; [Broker][TopicMetadata]
+    Broker =&gt; NodeId Host Port
+        NodeId =&gt; int32
+        Host =&gt; string
+        Port =&gt; int32
+    TopicMetadata =&gt; TopicErrorCode TopicName [PartitionMetadata]
+        TopicErrorCode =&gt; int16
+        PartitionMetadata =&gt; PartitionErrorCode PartitionId Leader Replicas Isr
+            PartitionErrorCode =&gt; int16
+            PartitionId =&gt; int32
+            Leader =&gt; int32
+            Replicas =&gt; [int32]
+            Isr =&gt; [int32]
+</code></pre><table>
+<thead>
+<tr>
+<th>域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leader</td>
+<td>作为某个partition leader的broker的node id。如果在leader选举中，id = -1           </td>
+</tr>
+<tr>
+<td>Replicas</td>
+<td>作为当前partition leader 的slave的 node 集合</td>
+</tr>
+<tr>
+<td>Isr</td>
+<td>caught up leader 的 replicas 子集合</td>
+</tr>
+<tr>
+<td>Broker</td>
+<td>kafka broker的nodeid、hostname和port</td>
+</tr>
+</tbody>
+</table>
+<pre><code>ProduceRequest =&gt; RequiredAcks Timeout [TopicName [Partition MessageSetSize MessageSet]]
+    RequiredAcks =&gt; int16
+    Timeout =&gt; int32
+    Partition =&gt; int32
+    MessageSetSize =&gt; int32
+</code></pre><table>
+<thead>
+<tr>
+<th>域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RequriedAcks</td>
+<td>这个域表明server在给请求相应之前要接收到多少个确认。如果是0，server不会发送任何响应（这是唯一一种server不会响应请求的情形，如果是1，server会等到数据写到本地再发送响应。如果是－1，server会阻塞直到消息被所有的sync replicas确认。对于任何大于1的情形，server将会阻塞直到相应数目的确认产生（不过server不会等待超过 in－sync replicas 数目的确认）</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>server等待RequireAcks中指定数目acknowledge超时时间，以毫秒为单位。这个超时时间不是针对请求时间：1）不包括网络延时，2）计时器在请求开始处理时启动，这样一来如果server负载高导致很多请求排队，那么等待时间时不会计算在内，3）we will not terminate a local write so if the local write time exceeds this timeout it will not be respected。要得到严格的超时时间，使用socket timeout</td>
+</tr>
+<tr>
+<td>TopicName</td>
+<td>数据发送的主题</td>
+</tr>
+<tr>
+<td>Partition</td>
+<td>数据发送的分区</td>
+</tr>
+<tr>
+<td>MessageSetSize</td>
+<td>后续message set的大小，以字节为单位</td>
+</tr>
+<tr>
+<td>MessageSet</td>
+<td>标准格式的消息集合</td>
+</tr>
+</tbody>
+</table>
+<pre><code>ProduceResponse =&gt; [TopicName [Partition ErrorCode Offset]]
+    TopicName =&gt; string
+    Partition =&gt; int32
+    ErrorCode =&gt; int16
+    Offset =&gt; int64
+</code></pre><table>
+<thead>
+<tr>
+<th>域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Topic</td>
+<td>响应相应的主题</td>
+</tr>
+<tr>
+<td>Partition</td>
+<td>响应相应的分区</td>
+</tr>
+<tr>
+<td>ErrorCode</td>
+<td>来自分区的错误，如果有的话。Error是跟分区对应的，这是因为指定的分区不可用或者在不同的host上，但是其他的分区可能成功接受到produce 请求</td>
+</tr>
+<tr>
+<td>Offset</td>
+<td>赋给追加到这个partition的message set的第一条消息的offset</td>
+</tr>
+</tbody>
+</table>
+<p>##Constants</p>
+<p>###Api Keys<br>API name|ApiKey Value<br>—|—<br>ProduceRequest|0<br>FetchRequest|1<br>OffsetRequest|2<br>MetadataRequest|3<br>LeaderAndIsrRequest|4<br>StopReplicaRequest|5<br>OffsetCommitRequest|8<br>OffsetFetchRequest|9</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>John Doe</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2014/04/11/2014/04/kafka-协议阅读笔记/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2014/04/11/2014/04/kafka-协议阅读笔记/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2014/04/11/2014/04/kafka-协议阅读笔记/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2014/07/23/2014/07/mahout推荐源码阅读笔记0/">
+        ← mahout推荐源码阅读笔记0
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2014/03/21/2014/03/go语言闭包/">
+        go语言闭包 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2014/04/11/2014/04/kafka-协议阅读笔记/" data-title="kafka 协议阅读笔记" data-url="http://yoursite.com/2014/04/11/2014/04/kafka-协议阅读笔记/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">Hexo</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

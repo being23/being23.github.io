@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>使用golang发送邮件 | being23</title>
+  <meta name="description" content="写给未来的自己" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="being23">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">being23</h1>
+            <h2 class="blog-description">写给未来的自己</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2015-09-16T16:31:38.000Z" itemprop="datePublished">
+          2015-09-17
+      </time>
+    
+    
+    | 
+    <a href='/tags/golang/'>golang</a>
+    
+    
+</span>
+    <h1 class="post-title">使用golang发送邮件</h1>
+    <section class="post-content">
+      <p>这两天项目中需要实现一个发送邮件的功能，这里记录下在实现过程中遇到的问题以及解决方法。</p>
+<hr>
+<h2 id="问题1——证书由不知名机构签发"><a href="#问题1——证书由不知名机构签发" class="headerlink" title="问题1——证书由不知名机构签发"></a>问题1——证书由不知名机构签发</h2><p>报错<code>x509: certificate signed by unknown authority</code>，这是由于go实现的Client端默认是要对服务端传过来的数字证书进行校验，关闭即可。查看了SendMail的<a href="http://127.0.0.1:6060/src/net/smtp/smtp.go?s=8766:8844#L290" target="_blank" rel="external">源码</a>，其在建立连接的时候，需要传递一个配置对象，修改下配置，是客户端不对证书进行校验。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> ok, _ := c.Extension(<span class="string">"STARTTLS"</span>); ok &#123;</div><div class="line">	config := &amp;tls.Config&#123;ServerName: host, InsecureSkipVerify: <span class="literal">true</span>&#125;</div><div class="line">	<span class="keyword">if</span> err = c.StartTLS(config); err != <span class="literal">nil</span> &#123;</div><div class="line">		<span class="keyword">return</span> err</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h2 id="问题2——无法识别的认证类型"><a href="#问题2——无法识别的认证类型" class="headerlink" title="问题2——无法识别的认证类型"></a>问题2——无法识别的认证类型</h2><p>报错<code>504 5.7.4 Unrecognized authentication type</code>。这是由于使用的邮件发送服务不支持golang提供的认证方式（CRAMMD5和PLAIN），我司的邮件服务支持NTLM和LOGIN两种认证方式。</p>
+<p><img src="./mail01.png" alt="mail01"><br>作为对比看下163的邮件发送服务。<br><img src="./mail02.png" alt="mail02"></p>
+<p>这就是为啥同一个程序163可以发邮件，而自己的服务就不可以。好在go提供了一个Auth接口，可以自己实现认证。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ol>
+<li><a href="http://tonybai.com/2015/04/30/go-and-https/" target="_blank" rel="external">Go和HTTPS</a></li>
+<li><a href="http://www.cnblogs.com/sdgwc/p/3324368.html" target="_blank" rel="external">SMTP邮件传输协议发送邮件和附件</a></li>
+<li><a href="https://gist.github.com/andelf/5118732" target="_blank" rel="external">golang net/smtp SMTP AUTH LOGIN Auth Handler</a></li>
+</ol>
+<h2 id="完整代码"><a href="#完整代码" class="headerlink" title="完整代码"></a>完整代码</h2><pre><code>package main
+
+import (
+    &quot;crypto/tls&quot;
+    &quot;encoding/base64&quot;
+    &quot;errors&quot;
+    &quot;fmt&quot;
+    &quot;net&quot;
+    &quot;net/smtp&quot;
+)
+
+type LoginAuth struct {
+    username, password string
+}
+
+func NewLoginAuth(username, password string) smtp.Auth {
+    return &amp;LoginAuth{username, password}
+}
+
+func (a *LoginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+    return &quot;LOGIN&quot;, []byte{}, nil
+}
+
+func (a *LoginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
+    if more {
+        switch string(fromServer) {
+        case &quot;Username:&quot;:
+            return []byte(a.username), nil
+        case &quot;Password:&quot;:
+            return []byte(a.password), nil
+        default:
+            return nil, errors.New(&quot;Unknown fromServer&quot;)
+        }
+    }
+    return nil, nil
+}
+
+func SendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+    c, err := smtp.Dial(addr)
+    host, _, _ := net.SplitHostPort(addr)
+    if err != nil {
+        fmt.Println(&quot;call dial&quot;)
+        return err
+    }
+    defer c.Close()
+
+    if ok, _ := c.Extension(&quot;STARTTLS&quot;); ok {
+        config := &amp;tls.Config{ServerName: host, InsecureSkipVerify: true}
+        if err = c.StartTLS(config); err != nil {
+            fmt.Println(&quot;call start tls&quot;)
+            return err
+        }
+    }
+
+    if a != nil {
+        if ok, _ := c.Extension(&quot;AUTH&quot;); ok {
+            if err = c.Auth(a); err != nil {
+                fmt.Println(&quot;check auth with err:&quot;, err)
+                return err
+            }
+        }
+    }
+
+    if err = c.Mail(from); err != nil {
+        return err
+    }
+    for _, addr := range to {
+        if err = c.Rcpt(addr); err != nil {
+            return err
+        }
+    }
+    w, err := c.Data()
+    if err != nil {
+        return err
+    }
+
+    header := make(map[string]string)
+    header[&quot;Subject&quot;] = &quot;Golang发送邮件测试&quot;
+    header[&quot;MIME-Version&quot;] = &quot;1.0&quot;
+    header[&quot;Content-Type&quot;] = &quot;text/plain; charset=\&quot;utf-8\&quot;&quot;
+    header[&quot;Content-Transfer-Encoding&quot;] = &quot;base64&quot;
+    message := &quot;&quot;
+    for k, v := range header {
+        message += fmt.Sprintf(&quot;%s: %s\r\n&quot;, k, v)
+    }
+    message += &quot;\r\n&quot; + base64.StdEncoding.EncodeToString(msg)
+    _, err = w.Write([]byte(message))
+
+    if err != nil {
+        return err
+    }
+    err = w.Close()
+    if err != nil {
+        return err
+    }
+    return c.Quit()
+}
+
+func main() {
+    auth := NewLoginAuth(&quot;username&quot;, &quot;password&quot;)
+
+    to := []string{&quot;收件人邮箱&quot;}
+    msg := []byte(&quot;这是一封来自go的测试邮件&quot;)
+    err := SendMail(&quot;smtphostwithport&quot;, auth, &quot;发件人邮箱&quot;, to, msg)
+    if err != nil {
+        fmt.Println(&quot;with err:&quot;, err)
+    }
+    fmt.Println(&quot;please check mailbox&quot;)
+}
+</code></pre><p>结束</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>范海强</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2015/09/17/使用golang发送邮件/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2015/09/17/使用golang发送邮件/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2015/09/17/使用golang发送邮件/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2015/12/05/PIP安装cx-Oracle/">
+        ← PIP安装cx-Oracle
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/">
+        SQLAlchemy 查询 Oracle 中文乱码 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2015/09/17/使用golang发送邮件/" data-title="使用golang发送邮件" data-url="http://yoursite.com/2015/09/17/使用golang发送邮件/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">being23</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

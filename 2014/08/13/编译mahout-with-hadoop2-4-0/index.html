@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>编译mahout with hadoop2.4.0 | being23</title>
+  <meta name="description" content="写给未来的自己" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="being23">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">being23</h1>
+            <h2 class="blog-description">写给未来的自己</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2014-08-13T08:46:31.000Z" itemprop="datePublished">
+          2014-08-13
+      </time>
+    
+    
+    | 
+    <a href='/tags/mahout/'>mahout</a>,
+    
+    <a href='/tags/hadoop/'>hadoop</a>
+    
+    
+</span>
+    <h1 class="post-title">编译mahout with hadoop2.4.0</h1>
+    <section class="post-content">
+      <p>最近准备将hadoop升级到2.0版本，当前使用的mahout是0.9版本，是不能跑在hadoop2.*上的，打算下载最新的代码编译。</p>
+<hr>
+<p>下载最新版并编译</p>
+<pre><code>git clone  git://git.apache.org/mahout.git
+mvn clean install -Dhadoop2 -Dhadoop.2.version=2.4.1 -DskipTests
+</code></pre><p>运行推荐报错</p>
+<pre><code>[root@datanode1 bin]# ./mahout recommenditembased --input /tmp/theme/ods/input --tempDir /tmp/theme/tmp/00/ --output /tmp/theme/res/00 --similarityClassname SIMILARITY_COOCCURRENCE
+...
+14/08/13 15:11:13 INFO Configuration.deprecation: mapred.output.dir is deprecated. Instead, use mapreduce.output.fileoutputformat.outputdir
+Exception in thread &quot;main&quot; java.lang.IncompatibleClassChangeError: Found interface org.apache.hadoop.mapreduce.JobContext, but class was expected
+        at org.apache.mahout.common.HadoopUtil.getCustomJobName(HadoopUtil.java:174)
+        at org.apache.mahout.common.AbstractJob.prepareJob(AbstractJob.java:614)
+...
+</code></pre><p>google了一通，发现这是由于<code>JobContext</code>从hadoop1.*的具体类变成了hadoop2.*的<a href="http://hadoop.apache.org/docs/current/api/org/apache/hadoop/mapred/JobContext.html" target="_blank" rel="external">接口</a>。</p>
+<p>看下依赖包，发现用的是hadoop1.*的依赖包</p>
+<pre><code>[root@datanode1 mahout]# find . -name hadoop*jar
+./examples/target/dependency/hadoop-core-1.2.1.jar
+</code></pre><p>在<a href="https://issues.apache.org/jira/browse/MAHOUT-1329" target="_blank" rel="external">这里</a>有人遇到了相同的问题并给出了解决方法，正确命令是</p>
+<pre><code>mvn clean install -Dhadoop2 -Dhadoop2.version=2.4.1 -DskipTests
+</code></pre><p>区别是<code>-Dhadoop2.version</code>中<strong>只有一个点</strong>，不是<code>-Dhadoop.2.version</code>。使用上面的命令重新编译，再看下依赖包，应该对了。</p>
+<pre><code>[root@datanode1 mahout]# find . -name hadoop*jar
+./examples/target/dependency/hadoop-yarn-api-2.4.1.jar
+./examples/target/dependency/hadoop-yarn-common-2.4.1.jar
+./examples/target/dependency/hadoop-yarn-client-2.4.1.jar
+./examples/target/dependency/hadoop-yarn-server-common-2.4.1.jar
+./examples/target/dependency/hadoop-common-2.4.1.jar
+./examples/target/dependency/hadoop-mapreduce-client-common-2.4.1.jar
+./examples/target/dependency/hadoop-auth-2.4.1.jar
+./examples/target/dependency/hadoop-mapreduce-client-core-2.4.1.jar
+./examples/target/dependency/hadoop-annotations-2.4.1.jar
+</code></pre><p>再次运行推荐成功，结果如下：</p>
+<pre><code>[root@datanode1 bin]# hadoop fs -cat /tmp/theme/res/00/part-r-00000
+14/08/13 16:09:32 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+1       [105:3.875,104:3.7222223,106:3.6]
+2       [106:2.9285715,105:2.5833333,107:2.0]
+3       [106:3.5,102:3.3333333,103:3.3125]
+4       [107:4.75,105:4.3333335,102:4.111111]
+5       [107:3.8333333]
+</code></pre>
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>范海强</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2014/08/13/编译mahout-with-hadoop2-4-0/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2014/08/13/编译mahout-with-hadoop2-4-0/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2014/08/13/编译mahout-with-hadoop2-4-0/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2014/09/14/hive-map-嵌套-map/">
+        ← hive map 嵌套 map
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2014/07/28/mahout推荐源码阅读笔记3/">
+        mahout推荐源码阅读笔记3 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2014/08/13/编译mahout-with-hadoop2-4-0/" data-title="编译mahout with hadoop2.4.0" data-url="http://yoursite.com/2014/08/13/编译mahout-with-hadoop2-4-0/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">being23</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

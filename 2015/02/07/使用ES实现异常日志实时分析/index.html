@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>使用ES实现异常日志实时分析 | being23</title>
+  <meta name="description" content="写给未来的自己" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="being23">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">being23</h1>
+            <h2 class="blog-description">写给未来的自己</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2015-02-07T15:16:48.000Z" itemprop="datePublished">
+          2015-02-07
+      </time>
+    
+    
+    | 
+    <a href='/tags/ELK/'>ELK</a>
+    
+    
+</span>
+    <h1 class="post-title">使用ES实现异常日志实时分析</h1>
+    <section class="post-content">
+      <p>ES除了作为搜索引擎使用，还可以作为分析引擎使用。当前，统计系统无法满足对异常日志实时分析的需求，本文试图利用ES提供的分析功能，在几乎无需编写代码，仅仅稍作配置的情况下，实现异常实时分析。</p>
+<p>依旧使用的ELK组件，其中logstash负责读取异常日志；elasticsearch负责存储并索引日志；kibana负责展示分析结果。具体配置或使用见下文。</p>
+<h2 id="logstash配置"><a href="#logstash配置" class="headerlink" title="logstash配置"></a>logstash配置</h2><p>首先看下异常日志格式<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">f1#f2#f3#f4#f5#f6#f7#f8#f9#f10#f12#f13</div></pre></td></tr></table></figure></p>
+<p>各个字段之间使用<code>#</code>分割，实例如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">f1#f2#0#f4#f5#f6#f7#f8#1#java.lang.NullPointerException</div><div class="line">at com.android.browser.H$1.onClick(DownloadHandler.java:201)</div><div class="line">at com.android.internal.app.AlertController$ButtonHandler.handleMessage(AlertController.java:166)</div><div class="line">at android.os.Handler.dispatchMessage(Handler.java:99)</div><div class="line">at android.os.Looper.loop(Looper.java:137)</div><div class="line">at android.app.ActivityThread.main(ActivityThread.java:5166)</div><div class="line">at java.lang.reflect.Method.invokeNative(Native Method)</div><div class="line">at java.lang.reflect.Method.invoke(Method.java:525)</div><div class="line">at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:745)</div><div class="line">at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:561)</div><div class="line">at dalvik.system.NativeStart.main(Native Method)</div><div class="line">#2015-01-27 13:22:32#2015-01-29 00:09:06</div></pre></td></tr></table></figure></p>
+<p>要实现不同维度分析，比如机型或者版本，就需要将每行记录根据格式拆分成一个一个相应的字段。logstash提供了过滤器插件<a href="http://logstash.net/docs/1.4.2/filters/grok" target="_blank" rel="external">grok</a>，官方文档对其描述是——将非结构化数据转成结构化数据的最佳插件。</p>
+<p>grok是根据模式来匹配事件的，模式其实就是一系列正则表达式，logstash预定义了大约<a href="https://github.com/elasticsearch/logstash/tree/v1.4.2/patterns" target="_blank" rel="external">120种模式</a> 。</p>
+<p>模式的使用语法是<code>%{SYNTAX:SEMANTIC}</code>，模式通过<code>SYNTAX</code>描述，匹配到的内容会保存到一个通过<code>SEMANTIC</code>描述的变量中。</p>
+<p>以文档中的例子简单说明，对于这条日志<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">55.3.244.1 GET /index.html 15824 0.043</div></pre></td></tr></table></figure></p>
+<p>相应的模式应该是<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">%&#123;IP:client&#125; %&#123;WORD:method&#125; %&#123;URIPATHPARAM:request&#125; %&#123;NUMBER:bytes&#125; %&#123;NUMBER:duration&#125;</div></pre></td></tr></table></figure></p>
+<p>其中使用到的模式都是预定义的，对于没有的模式有两种方式自定义，具体见<a href="http://logstash.net/docs/1.4.2/filters/grok" target="_blank" rel="external">文档</a>。</p>
+<p>成功匹配后，每个事件就多出下面额外的字段</p>
+<ul>
+<li>client: 55.3.244.1</li>
+<li>method: GET</li>
+<li>request: /index.html</li>
+<li>bytes: 15824</li>
+<li>duration: 0.043</li>
+</ul>
+<blockquote>
+<p>提示<br>正则表达式通常很难一次写对，所以文档中给出了一个在线调试工具<a href="http://grokdebug.herokuapp.com" target="_blank" rel="external">http://grokdebug.herokuapp.com</a>，我在实际使用中发现访问很慢，这里给出另一个在线工具<a href="http://grokconstructor.appspot.com/do/match#result" target="_blank" rel="external">http://grokconstructor.appspot.com/do/match#result</a></p>
+</blockquote>
+<p>也许有人会注意到，上面给出的异常日志分布在多行中，但是logstash是以行为单位处理日志的，这就要求在使用过滤器grok之前按照某种规则合并日志。幸运的是，logstash自带一个称为<a href="http://logstash.net/docs/1.4.2/filters/multiline" target="_blank" rel="external">multiline</a>的过滤器，配置非常简单，不解释。</p>
+<p>现在来看看实际的过滤器是如何配置的<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">filter &#123;</div><div class="line">    multiline &#123;</div><div class="line">        # 指定合并规则——所有不是以数字开头的行需要被合并</div><div class="line">        pattern =&gt; &quot;^[^\d]&quot;</div><div class="line">        # 合并到哪里——上一行</div><div class="line">        what =&gt; &quot;previous&quot;</div><div class="line">    &#125; </div><div class="line">    grok &#123;</div><div class="line">        # 从合并后的记录中匹配字段</div><div class="line">        match =&gt; [&quot;message&quot;, &quot;%&#123;WORD:IMEI&#125;#(?&lt;MODEL&gt;[\w\d\s]+)#(?&lt;ROM_VERSION&gt;[\w\d.]+)#(?&lt;OS_VERSION&gt;[\w\d.]+)#(?&lt;SDK_VERSION&gt;[\w\d.]+)#%&#123;WORD:SYSTEM_ID&#125;#(?&lt;APP_VERSION&gt;[\w\d.[^\#]]+)#(?&lt;NETWORK&gt;[^#]*)#%&#123;WORD:EVENT_COUNT&#125;#(?&lt;DESCRIPTION&gt;[^:\s]+)(?&lt;EXCEPTION&gt;[^#]+)#%&#123;TIMESTAMP_ISO8601:EVENT_TIME&#125;#%&#123;TIMESTAMP_ISO8601:SERVER_TIME&#125;&quot;]</div><div class="line">        # 因为成功匹配后，每个字段值保存在额外字段中，&quot;message&quot;中的值就重复了，</div><div class="line">        # 从节省磁盘出发，将其删除</div><div class="line">        # 如果没有匹配成功，会增加一个额外字段&quot;tags&quot;，默认值&quot;_grokparsefailure&quot;</div><div class="line">        remove_field =&gt; [ &quot;message&quot; ]</div><div class="line">    &#125;</div><div class="line">    # 这里不需要更多解释了吧</div><div class="line">    if &quot;_grokparsefailure&quot; in [tags] &#123;</div><div class="line">        drop&#123;&#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h2 id="elasticsearch配置"><a href="#elasticsearch配置" class="headerlink" title="elasticsearch配置"></a>elasticsearch配置</h2><p>略</p>
+<h2 id="kibana配置"><a href="#kibana配置" class="headerlink" title="kibana配置"></a>kibana配置</h2><p>在这个看脸的世界，有必要先给出界面截图一张，让诸位看官一睹为快。<br><img src="./exception_analysis.jpg" alt="Alt text"></p>
+<p>想实际体验一把的，请猛击<a href="http://192.168.5.176/kibana/index.html#/dashboard/elasticsearch/Logstash%20Search" target="_blank" rel="external">http://192.168.5.176/kibana/index.html#/dashboard/elasticsearch/Logstash%20Search</a><br>由于部署在内网开发机，目前貌似只有6楼的童鞋可以打开。</p>
+<p>整个界面中，4个直方图（kibana内部成为面板，panel）占据了大部分空间，从左到右，从上到下，依次是</p>
+<ul>
+<li>机型分布</li>
+<li>版本分布</li>
+<li>应用分布</li>
+<li>异常分布</li>
+</ul>
+<p>点击每个面板中的某个色块，就会在过滤区增加一个过滤条件，同时其他面板中的数据分布也会做出相应调整。例如点击了某个机型，那么对于版本分布就会调整为与这个机型相对的版本分布，而不再是所有机型的版本分布。</p>
+<p>由于ES是近实时处理，所以上述面板中的数据也可以做到实时变化。</p>
+<p>如果想查看历史上某个时间段的分布状况，有两种指定方式</p>
+<ul>
+<li>通过鼠标在事件随时间变化面板中选取感兴趣的时间段</li>
+<li>在右上角时间下拉列表中选取感兴趣的时间段</li>
+</ul>
+<p><img src="./exception_timewin.jpg" alt="Alt text"></p>
+<hr>
+<p>接下来，来看看这些面板是如何添加的</p>
+<p>面板包含在row中，所以第一步点击右下角”ADDＡROW”添加</p>
+<p><img src="./exception_addrow.jpg" alt="Alt text"></p>
+<p>之后弹出ROW命名界面，左侧表明当前已经有三个ROW：Graph、exception和Events；上下箭头可以调整每个ROW的上下位置</p>
+<p><img src="./exception_namerow.jpg" alt="Alt text"></p>
+<p>点击保存后，有</p>
+<p><img src="./exception_addedrow.jpg" alt="Alt text"></p>
+<p>目前尚未添加面板，所有整个ROW是空的。点击左上角”Add panel to empty row”添加面板。选择面板类型，这里选择”terms”；面板标题及宽度设为”model dist”和”4”；字段这里选取”model”，表明分析机型，后面的10和count，表示降序最多显示10个。</p>
+<p><img src="./exception_addpanel.jpg" alt="Alt text"></p>
+<p>点击保存后，就可以看到新添加的面板了</p>
+<p><img src="./exception_addedpanel1.jpg" alt="Alt text"></p>
+<p>新加的面板需要保存，否则下次打开时，需要重新添加。</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>范海强</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2015/02/07/使用ES实现异常日志实时分析/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2015/02/07/使用ES实现异常日志实时分析/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2015/02/07/使用ES实现异常日志实时分析/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2015/03/01/（译）IO-揭秘/">
+        ← （译）IO 揭秘
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2015/01/10/logstash插件开发/">
+        logstash插件开发 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2015/02/07/使用ES实现异常日志实时分析/" data-title="使用ES实现异常日志实时分析" data-url="http://yoursite.com/2015/02/07/使用ES实现异常日志实时分析/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">being23</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

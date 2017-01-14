@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>加密性能测试 | Hexo</title>
+  <meta name="description" content="" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="Hexo">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">Hexo</h1>
+            <h2 class="blog-description"></h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2015-04-02T15:09:54.000Z" itemprop="datePublished">
+          2015-04-02
+      </time>
+    
+    
+    | 
+    <a href='/tags/des/'>des</a>,
+    
+    <a href='/tags/3des/'>3des</a>,
+    
+    <a href='/tags/aes/'>aes</a>,
+    
+    <a href='/tags/xxtea/'>xxtea</a>
+    
+    
+</span>
+    <h1 class="post-title">加密性能测试</h1>
+    <section class="post-content">
+      <p>最近因为业务需要，对四种不同的加密方法（des、3des、aes和xxtea）做了性能测试（加解密吞吐量，加密前后文件变化大小）。</p>
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><ol>
+<li>加解密吞吐量：aes&gt;xxtea&gt;des&gt;3des。其中，aes的吞吐量高于其他算法1-2个数量级；xxtea的加密吞吐量远高于des，接近8倍，解密吞吐量接近</li>
+<li>文件大小加密前后转换率：四种方法加密后文件大小无差异；加密后文件大小与原文件大小差异可以忽略</li>
+</ol>
+<h2 id="平均"><a href="#平均" class="headerlink" title="平均"></a>平均</h2><table>
+<thead>
+<tr>
+<th style="text-align:left">加密算法</th>
+<th style="text-align:right">加密吞吐量M/s</th>
+<th style="text-align:right">加密耗时s</th>
+<th style="text-align:right">解密吞吐量M/s</th>
+<th style="text-align:right">解密耗时s</th>
+<th style="text-align:right">加密前文件大小M</th>
+<th style="text-align:right">加密后文件大小M</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">des</td>
+<td style="text-align:right">11.73</td>
+<td style="text-align:right">105.87</td>
+<td style="text-align:right">11.76</td>
+<td style="text-align:right">105.63</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">3des</td>
+<td style="text-align:right">3.72</td>
+<td style="text-align:right">340.02</td>
+<td style="text-align:right">3.97</td>
+<td style="text-align:right">312.62</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">xxtea</td>
+<td style="text-align:right">81.80</td>
+<td style="text-align:right">15.19</td>
+<td style="text-align:right">13.95</td>
+<td style="text-align:right">89.83</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">aes</td>
+<td style="text-align:right">361.92</td>
+<td style="text-align:right">3.43</td>
+<td style="text-align:right">374.29</td>
+<td style="text-align:right">3.32</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+</tbody>
+</table>
+<p><img src="./benchmark.jpg" alt="benchmark"></p>
+<hr>
+<h2 id="第一组"><a href="#第一组" class="headerlink" title="第一组"></a>第一组</h2><table>
+<thead>
+<tr>
+<th style="text-align:left">加密算法</th>
+<th style="text-align:right">加密吞吐量M/s</th>
+<th style="text-align:right">加密耗时s</th>
+<th style="text-align:right">解密吞吐量M/s</th>
+<th style="text-align:right">解密耗时s</th>
+<th style="text-align:right">加密前文件大小M</th>
+<th style="text-align:right">加密后文件大小M</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">des</td>
+<td style="text-align:right">11.73</td>
+<td style="text-align:right">105.91</td>
+<td style="text-align:right">11.76</td>
+<td style="text-align:right">105.58</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">3des</td>
+<td style="text-align:right">3.98</td>
+<td style="text-align:right">312.37</td>
+<td style="text-align:right">3.97</td>
+<td style="text-align:right">312.79</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">xxtea</td>
+<td style="text-align:right">82.81</td>
+<td style="text-align:right">14.99</td>
+<td style="text-align:right">14.27</td>
+<td style="text-align:right">87.01</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">aes</td>
+<td style="text-align:right">363.77</td>
+<td style="text-align:right">3.41</td>
+<td style="text-align:right">373.40</td>
+<td style="text-align:right">3.32</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第二组"><a href="#第二组" class="headerlink" title="第二组"></a>第二组</h2><table>
+<thead>
+<tr>
+<th style="text-align:left">加密算法</th>
+<th style="text-align:right">加密吞吐量M/s</th>
+<th style="text-align:right">加密耗时s</th>
+<th style="text-align:right">解密吞吐量M/s</th>
+<th style="text-align:right">解密耗时s</th>
+<th style="text-align:right">加密前文件大小M</th>
+<th style="text-align:right">加密后文件大小M</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">des</td>
+<td style="text-align:right">11.73</td>
+<td style="text-align:right">105.89</td>
+<td style="text-align:right">11.77</td>
+<td style="text-align:right">105.53</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">3des</td>
+<td style="text-align:right">2.93</td>
+<td style="text-align:right">423.33</td>
+<td style="text-align:right">3.97</td>
+<td style="text-align:right">312.50</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">xxtea</td>
+<td style="text-align:right">79.17</td>
+<td style="text-align:right">15.68</td>
+<td style="text-align:right">11.83</td>
+<td style="text-align:right">104.97</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">aes</td>
+<td style="text-align:right">362.66</td>
+<td style="text-align:right">3.42</td>
+<td style="text-align:right">376.30</td>
+<td style="text-align:right">3.30</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第三组"><a href="#第三组" class="headerlink" title="第三组"></a>第三组</h2><table>
+<thead>
+<tr>
+<th style="text-align:left">加密算法</th>
+<th style="text-align:right">加密吞吐量M/s</th>
+<th style="text-align:right">加密耗时s</th>
+<th style="text-align:right">解密吞吐量M/s</th>
+<th style="text-align:right">解密耗时s</th>
+<th style="text-align:right">加密前文件大小M</th>
+<th style="text-align:right">加密后文件大小M</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">des</td>
+<td style="text-align:right">11.73</td>
+<td style="text-align:right">105.84</td>
+<td style="text-align:right">11.76</td>
+<td style="text-align:right">105.58</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">3des</td>
+<td style="text-align:right">3.98</td>
+<td style="text-align:right">312.03</td>
+<td style="text-align:right">3.97</td>
+<td style="text-align:right">312.53</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">xxtea</td>
+<td style="text-align:right">82.54</td>
+<td style="text-align:right">15.04</td>
+<td style="text-align:right">14.60</td>
+<td style="text-align:right">85.06</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">aes</td>
+<td style="text-align:right">358.32</td>
+<td style="text-align:right">3.46</td>
+<td style="text-align:right">373.79</td>
+<td style="text-align:right">3.32</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第四组"><a href="#第四组" class="headerlink" title="第四组"></a>第四组</h2><table>
+<thead>
+<tr>
+<th style="text-align:left">加密算法</th>
+<th style="text-align:right">加密吞吐量M/s</th>
+<th style="text-align:right">加密耗时s</th>
+<th style="text-align:right">解密吞吐量M/s</th>
+<th style="text-align:right">解密耗时s</th>
+<th style="text-align:right">加密前文件大小M</th>
+<th style="text-align:right">加密后文件大小M</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">des</td>
+<td style="text-align:right">11.74</td>
+<td style="text-align:right">105.82</td>
+<td style="text-align:right">11.74</td>
+<td style="text-align:right">105.82</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">3des</td>
+<td style="text-align:right">3.98</td>
+<td style="text-align:right">312.32</td>
+<td style="text-align:right">3.97</td>
+<td style="text-align:right">312.66</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">xxtea</td>
+<td style="text-align:right">82.66</td>
+<td style="text-align:right">15.02</td>
+<td style="text-align:right">15.10</td>
+<td style="text-align:right">82.25</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+<tr>
+<td style="text-align:left">aes</td>
+<td style="text-align:right">362.91</td>
+<td style="text-align:right">3.42</td>
+<td style="text-align:right">373.68</td>
+<td style="text-align:right">3.32</td>
+<td style="text-align:right">1184</td>
+<td style="text-align:right">1184</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="测试代码"><a href="#测试代码" class="headerlink" title="测试代码"></a>测试代码</h2><pre><code>package main
+
+import (
+        &quot;bytes&quot;
+        &quot;crypto/aes&quot;
+        &quot;crypto/cipher&quot;
+        &quot;crypto/des&quot;
+        &quot;fmt&quot;
+        &quot;github.com/xxtea/xxtea-go/xxtea&quot;
+        &quot;io/ioutil&quot;
+        &quot;os&quot;
+        &quot;runtime&quot;
+        &quot;time&quot;
+)
+
+func zeroPadding(ciphertext []byte, blockSize int) []byte {
+        padding := blockSize - len(ciphertext)%blockSize
+        padtext := bytes.Repeat([]byte{0}, padding)
+        return append(ciphertext, padtext...)
+}
+
+func zeroUnPadding(origData []byte) []byte {
+        return bytes.TrimFunc(origData,
+                func(r rune) bool {
+                        return r == rune(0)
+                })
+}
+
+func checkError(err error) {
+        if err != nil {
+                fmt.Println(&quot;Error:&quot;, err)
+        }
+}
+
+func getRunTime(fn func([]byte, []byte) []byte, data []byte, key []byte, method string, suffix string) ([]byte, float64) {
+        start := time.Now()
+        result := fn(data, key)
+        end := time.Now()
+        //fmt.Println(method, suffix, &quot;cost:&quot;, end.Sub(start))
+        return result, end.Sub(start).Seconds()
+}
+
+func desEncrypt(data, key []byte) []byte {
+        block, err := des.NewCipher(key)
+        checkError(err)
+
+        data = zeroPadding(data, block.BlockSize())
+        //初始向量使用key
+        blockMode := cipher.NewCBCEncrypter(block, key)
+        blockMode.CryptBlocks(data, data)
+        return data
+}
+
+func desDecrypt(data, key []byte) []byte {
+        block, err := des.NewCipher(key)
+        checkError(err)
+
+        blockMode := cipher.NewCBCDecrypter(block, key)
+        blockMode.CryptBlocks(data, data)
+        data = zeroUnPadding(data)
+        return data
+}
+
+func tdesEncrypt(data, key []byte) []byte {
+        block, err := des.NewTripleDESCipher(key)
+        checkError(err)
+
+        data = zeroPadding(data, block.BlockSize())
+        blockMode := cipher.NewCBCEncrypter(block, key[:8])
+        blockMode.CryptBlocks(data, data)
+        return data
+}
+
+func tdesDecrypt(data, key []byte) []byte {
+        block, err := des.NewTripleDESCipher(key)
+        checkError(err)
+
+        blockMode := cipher.NewCBCDecrypter(block, key[:8])
+        blockMode.CryptBlocks(data, data)
+        data = zeroUnPadding(data)
+        return data
+}
+
+func aesEncrypt(data, key []byte) []byte {
+        block, err := aes.NewCipher(key)
+        checkError(err)
+
+        data = zeroPadding(data, block.BlockSize())
+        blockMode := cipher.NewCBCEncrypter(block, key)
+        blockMode.CryptBlocks(data, data)
+        return data
+}
+
+func aesDecrypt(data, key []byte) []byte {
+        block, err := aes.NewCipher(key)
+        checkError(err)
+
+        blockMode := cipher.NewCBCDecrypter(block, key)
+        blockMode.CryptBlocks(data, data)
+        data = zeroUnPadding(data)
+        return data
+}
+
+func xxteaEncrypt(data, key []byte) []byte {
+        data = xxtea.Encrypt(data, key)
+        return data
+}
+
+func xxteaDecrypt(data, key []byte) []byte {
+        data = xxtea.Decrypt(data, key)
+        return data
+}
+
+var (
+        deskey   = []byte(`12345678`)
+        tdeskey  = []byte(`123456781234567812345678`)
+        aeskey   = []byte(`1234567812345678`)
+        xxteakey = []byte(`1234567812345678`)
+)
+
+func main() {
+        if len(os.Args) &lt; 2 {
+                fmt.Println(&quot;plz input filename of orignal data&quot;)
+                os.Exit(-1)
+        }
+        start := time.Now()
+        content, err := ioutil.ReadFile(os.Args[1])
+        checkError(err)
+        originalSize := len(content)
+        fmt.Println(&quot;orignal file size = &quot;, originalSize)
+        fmt.Println(&quot;read file cost: &quot;, time.Since(start))
+
+        encryptFuncs := []func([]byte, []byte) []byte{tdesEncrypt, aesEncrypt, desEncrypt, xxteaEncrypt}
+        decryptFuncs := []func([]byte, []byte) []byte{tdesDecrypt, aesDecrypt, desDecrypt, xxteaDecrypt}
+
+        keys := [][]byte{tdeskey, aeskey, deskey, xxteakey}
+        methods := []string{&quot;3des&quot;, &quot;aes&quot;, &quot;des&quot;, &quot;xxtea&quot;}
+        suffix := []string{&quot;encrypt&quot;, &quot;decrypt&quot;}
+
+        for i, encryptFunc := range encryptFuncs {
+                data, cost := getRunTime(encryptFunc, content, keys[i], methods[i], suffix[0])
+                //ioutil.WriteFile(&quot;/tmp/benchmark_&quot;+methods[i]+&quot;_&quot;+suffix[0], data, 0666)
+                encryptedSize := len(data)
+                fmt.Printf(&quot;%s\t%s rate: %.2fM/s\t%f\t&quot;, methods[i], suffix[0], float64(originalSize)/cost/1000000, cost)
+
+                //data, err = ioutil.ReadFile(&quot;/tmp/benchmark_&quot; + methods[i] + &quot;_&quot; + suffix[0])
+                checkError(err)
+                data, cost = getRunTime(decryptFuncs[i], data, keys[i], methods[i], suffix[1])
+                //ioutil.WriteFile(&quot;/tmp/benchmark_&quot;+methods[i]+&quot;_&quot;+suffix[1], data, 0666)
+                content = data
+                fmt.Printf(&quot;\t%s rate:%.2fM/s\t%f\t%dM\t%dM\n&quot;, suffix[1], float64(encryptedSize)/cost/1000000, cost, originalSize/1024/1024, encryptedSize/1024/1024)
+                runtime.GC()
+        }
+}
+</code></pre><p>20150402@前海花园</p>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>John Doe</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2015/04/02/2015/04/加密性能测试/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2015/04/02/2015/04/加密性能测试/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2015/04/02/2015/04/加密性能测试/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2015/07/03/2015/07/SQLAlchemy 查询 Oracle 中文乱码/">
+        ← SQLAlchemy 查询 Oracle 中文乱码
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2015/03/01/2015/03/（译）IO-揭秘/">
+        （译）IO 揭秘 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2015/04/02/2015/04/加密性能测试/" data-title="加密性能测试" data-url="http://yoursite.com/2015/04/02/2015/04/加密性能测试/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">Hexo</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

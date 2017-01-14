@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>SQLAlchemy 查询 Oracle 中文乱码 | being23</title>
+  <meta name="description" content="写给未来的自己" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="being23">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">being23</h1>
+            <h2 class="blog-description">写给未来的自己</h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2015-07-03T09:28:33.000Z" itemprop="datePublished">
+          2015-07-03
+      </time>
+    
+    
+    | 
+    <a href='/tags/sqlalchemy/'>sqlalchemy</a>,
+    
+    <a href='/tags/oracle/'>oracle</a>
+    
+    
+</span>
+    <h1 class="post-title">SQLAlchemy 查询 Oracle 中文乱码</h1>
+    <section class="post-content">
+      <p>flask 通过 flask_sqlalchemy 查询 oracle 返回结果显示乱码，</p>
+<p>解决方法：</p>
+<ul>
+<li><p>设置环境变量</p>
+<pre><code>os.environ[&apos;NLS_LANG&apos;] = &apos;SIMPLIFIED CHINESE_CHINA.AL32UTF8&apos;
+</code></pre><p>  oralce 服务端编码可以通过<code>select userenv(&#39;language&#39;) from dual;</code>查询</p>
+</li>
+</ul>
+<p>一段完整代码</p>
+<pre><code>#-*-coding:utf-8-*-
+
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+import os
+
+os.environ[&apos;NLS_LANG&apos;] = &apos;SIMPLIFIED CHINESE_CHINA.AL32UTF8&apos;
+app = Flask(__name__)
+#app.config[&apos;SQLALCHEMY_DATABASE_URI&apos;] = &apos;mysql://username:passwd@host/db?charset=utf8&apos;
+app.config[&apos;SQLALCHEMY_DATABASE_URI&apos;] = &quot;oracle://username:passwd@host:port/statistics&quot;
+app.config[&apos;SQLALCHEMY_ECHO&apos;] = True
+app.config[&apos;SQLALCHEMY_RECORD_QUERIES&apos;] = True
+DEBUG = True
+
+db = SQLAlchemy(app)
+
+if __name__ == &apos;__main__&apos;:
+    sql = &apos;select col1, col2 from tbl where rownum &lt;= 1&apos;
+    for item in db.engine.execute(sql):
+        print item
+        for col in item:
+            print col
+</code></pre><p>相关资料</p>
+<ol>
+<li><a href="http://firefish.blog.51cto.com/298258/112794" target="_blank" rel="external">sqlalchemy中文问题解决方案</a></li>
+<li><a href="http://heipark.iteye.com/blog/1765915" target="_blank" rel="external">python oracle查询中文乱码（问号）问题</a></li>
+<li><a href="http://dw008.blog.51cto.com/2050259/934741" target="_blank" rel="external">PL/SQL Developer 显示中文乱码问题</a></li>
+</ol>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>范海强</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2015/09/17/使用golang发送邮件/">
+        ← 使用golang发送邮件
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2015/04/02/加密性能测试/">
+        加密性能测试 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/" data-title="SQLAlchemy 查询 Oracle 中文乱码" data-url="http://yoursite.com/2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">being23</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>

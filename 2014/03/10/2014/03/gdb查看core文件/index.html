@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <title>gdb查看core文件 | Hexo</title>
+  <meta name="description" content="" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
+
+  <meta name="generator" content="Hexo">
+
+  
+  
+  
+
+  
+</head>
+
+
+<body class="post-template">
+
+  <header class="site-head" >
+    <div class="vertical">
+        <div class="site-head-content inner">
+             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
+            <h1 class="blog-title">Hexo</h1>
+            <h2 class="blog-description"></h2>
+        </div>
+    </div>
+</header>
+  
+
+<main class="content" role="main">
+  <article class="post">
+    <span class="post-meta">
+      <time datetime="2014-03-10T12:44:21.000Z" itemprop="datePublished">
+          2014-03-10
+      </time>
+    
+    
+    | 
+    <a href='/tags/gdb/'>gdb</a>
+    
+    
+</span>
+    <h1 class="post-title">gdb查看core文件</h1>
+    <section class="post-content">
+      <p>嗯，有一阵子没写日志了。</p>
+<p>曾经有很长一段时间，其实也就是今天之前啦，在用gdb调试core文件时，仅限于通过bt查看下崩溃时的堆栈。这两天，服务常常挂掉，查看堆栈发现是rapidjson在解析时断言失败导致的。于是想要查看接收到消息，以前的做法是，把消息记录到日志中，之后再根据崩溃的时间点去日志中找（掩面）。之前也有想过，既然core文件中记录了调用堆栈，那么记录调用时参数的值，也是合情合理的啊。</p>
+<p>今天在网上找了些资料，算是大概弄明白了～过程大致如下：</p>
+<ol>
+<li><p><code>[uc@hz0073 bin]$ gdb mybin core.25756</code></p>
+</li>
+<li><p>打印调用堆栈</p>
+<pre><code>(gdb) bt
+#0  0x0000003ddae32885 in raise () from /lib64/libc.so.6
+#1  0x0000003ddae34065 in abort () from /lib64/libc.so.6
+#2  0x0000003ddae2b9fe in __assert_fail_base () from /lib64/libc.so.6
+#3  0x0000003ddae2bac0 in __assert_fail () from /lib64/libc.so.6
+#4  0x0000000000419aa4 in FindMember (this=0x7fbdcc329378, request=0x7fbdcc327980, root=...) at ../../rapidjson/include/rapidjson/document.h:620
+#5  operator[] (this=0x7fbdcc329378, request=0x7fbdcc327980, root=...) at ../../rapidjson/include/rapidjson/document.h:233
+#6  Head::parse_head (this=0x7fbdcc329378, request=0x7fbdcc327980, root=...) at Head.cpp:51
+#7  0x000000000041009f in Request::parse_msg (this=0x7fbdcc329370, request=0x7fbdcc327980, num_record=@0x7fbddbbb2b68) at Request.cpp:41
+#8  0x000000000041baf8 in HttpHandler::handle (request=0x7fbdcc327980, a=&lt;value optimized out&gt;) at HttpHandler.cpp:114
+#9  0x000000000042b010 in _evhtp_request_parser_fini ()
+#10 0x000000000043010b in htparser_run ()
+#11 0x000000000042bdb1 in _evhtp_connection_readcb ()
+#12 0x00007fbddefe1ee5 in bufferevent_readcb (fd=&lt;value optimized out&gt;, event=&lt;value optimized out&gt;, arg=0x7fbdcc0d47a0) at bufferevent_sock.c:186
+#13 0x00007fbddefd9e0c in event_process_active_single_queue (base=0x7fbdcc0008f0, flags=0) at event.c:1350
+#14 event_process_active (base=0x7fbdcc0008f0, flags=0) at event.c:1420
+#15 event_base_loop (base=0x7fbdcc0008f0, flags=0) at event.c:1621
+#16 0x0000000000431152 in _evthr_loop ()
+#17 0x0000003ddb6077f1 in start_thread () from /lib64/libpthread.so.0
+#18 0x0000003ddaee5ccd in clone () from /lib64/libc.so.6
+</code></pre></li>
+<li><p>跳到堆栈中某一层，这里是第7层</p>
+<pre><code>(gdb) f 7
+#7  0x000000000041009f in Request::parse_msg (this=0x7fbdcc329370, request=0x7fbdcc327980, num_record=@0x7fbddbbb2b68) at Request.cpp:41
+41      Request.cpp: 没有那个文件或目录.
+        in Request.cpp
+</code></pre></li>
+<li><p>打印变量值<code>str_msg</code> </p>
+<pre><code>(gdb) p str_msg         
+$8 = 
+    &quot;{\&quot;ex\&quot;:[],\&quot;pr\&quot;:[{\&quot;e\&quot;:1394130724051,\&quot;s\&quot;:1394130632364,\&quot;c\&quot;:1,\&quot;i\&quot;:1394130724052,\&quot;p\&quot;:[{\&quot;n\&quot;:\&quot;desktopspeedup.DesktopSpeedUpAnimationActivity\&quot;,\&quot;d\&quot;:8116,\&quot;ps\&quot;:1},{\&quot;n\&quot;:\&quot;manage.AccelerateActivity\&quot;,\&quot;d\&quot;:24918,\&quot;ps\&quot;:&quot;...
+</code></pre></li>
+</ol>
+<blockquote>
+<p>如果字符串太长，结尾以<code>...</code>表示，可以通过<code>set print elements 0</code>调整</p>
+</blockquote>
+
+    </section>
+    <footer class="post-footer">
+      <section class="author">
+    <h4>John Doe</h4>
+    <p>往事浓淡，色如清，已轻；经年悲欢，净如镜，已静。</p>
+</section>
+      <section class="share">
+    <h4>Share this post</h4>
+    <a class="icon-twitter" href="http://twitter.com/share?url=http://yoursite.com/2014/03/10/2014/03/gdb查看core文件/"
+       onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <span class="hidden">Twitter</span>
+    </a>
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://yoursite.com/2014/03/10/2014/03/gdb查看core文件/"
+       onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <span class="hidden">Facebook</span>
+    </a>
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=http://yoursite.com/2014/03/10/2014/03/gdb查看core文件/"
+       onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <span class="hidden">Google+</span>
+    </a>
+</section>
+    </footer>
+  </article>
+  <nav class="pagination" role="pagination">
+    
+    <a class="newer-posts" href="/2014/03/21/2014/03/go语言闭包/">
+        ← go语言闭包
+    </a>
+    
+    <span class="page-number">•</span>
+    
+    <a class="older-posts" href="/2014/01/19/2014/01/libevhtp使用小记/">
+        libevhtp使用小记 →
+    </a>
+    
+</nav>
+  <div id="comment" class="comments-area">
+    <!--
+    <h1 class="title">Comments</h1>
+	-->
+    
+    <!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="2014/03/10/2014/03/gdb查看core文件/" data-title="gdb查看core文件" data-url="http://yoursite.com/2014/03/10/2014/03/gdb查看core文件/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"being23"};
+		(function() {
+			var ds = document.createElement('script');
+			ds.type = 'text/javascript';ds.async = true;
+			ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+			ds.charset = 'UTF-8';
+			(document.getElementsByTagName('head')[0] 
+			 || document.getElementsByTagName('body')[0]).appendChild(ds);
+		})();
+		</script>
+	<!-- 多说公共JS代码 end -->
+		
+</div>
+</main>
+
+
+  
+<footer class="site-footer">
+  
+  <div class="inner">
+     <section class="copyright">All content copyright <a href="/">Hexo</a> &copy; 2014 &bull; All rights reserved.</section>
+     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
+  </div>
+</footer>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/js/index.js"></script>
+
+
+
+
+
+
+</body>
+</html>
