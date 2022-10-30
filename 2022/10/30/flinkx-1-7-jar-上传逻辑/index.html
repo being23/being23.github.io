@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>flinkx 1.7 jar 上传逻辑 | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tags">Tags</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tags">Tags</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">flinkx 1.7 jar 上传逻辑</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">October 30, 2022&nbsp;&nbsp;12:11:11</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>flinkx 1.7 任务启动过程中要上传的 jar 分两部分</p>
+<ol>
+<li>flink lib 目录下的 jar，又细分成两部分 flink-dist 和 非 flink-dist，以及<del>具体的 flinkx 插件 jar 包</del></li>
+<li>flinkx 插件目录下的 jar，又细分成 flinkx.jar （对应 flinkx-core 模块）和具体插件的 jar</li>
+</ol>
+<p>在具体的上传过程中，<br>flink-dist 单独上传</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Path</span> <span class="variable">remotePathJar</span> <span class="operator">=</span> setupSingleLocalResource(</span><br><span class="line">  <span class="string">&quot;flink.jar&quot;</span>,</span><br><span class="line">  fs,</span><br><span class="line">  appId,</span><br><span class="line">  flinkJarPath,</span><br><span class="line">  localResources,</span><br><span class="line">  homeDir,</span><br><span class="line">  <span class="string">&quot;&quot;</span>);</span><br></pre></td></tr></table></figure>
+<p>其他的 jar 作业 user jar 一起上传</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (jobGraph != <span class="literal">null</span>) &#123;</span><br><span class="line">  <span class="comment">// add the user code jars from the provided JobGraph</span></span><br><span class="line">  <span class="comment">// 这里所说的 user code jars 就是 flinkx plugin 目录下的 flinkx.jar</span></span><br><span class="line">  <span class="keyword">for</span> (org.apache.flink.core.fs.Path path : jobGraph.getUserJars()) &#123;</span><br><span class="line">    userJarFiles.add(<span class="keyword">new</span> <span class="title class_">File</span>(path.toUri()));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (userJarInclusion != YarnConfigOptions.UserJarInclusion.DISABLED) &#123;</span><br><span class="line">  userClassPaths = uploadAndRegisterFiles(</span><br><span class="line">    userJarFiles,</span><br><span class="line">    fs,</span><br><span class="line">    homeDir,</span><br><span class="line">    appId,</span><br><span class="line">    paths,</span><br><span class="line">    localResources,</span><br><span class="line">    envShipFileList);</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  userClassPaths = Collections.emptyList();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>userJarFiles</code> 的初始化是在<code>com.dtstack.flinkx.launcher.perjob.PerJobClusterClientBuilder#createPerJobClusterDescriptor</code>，这里将 flink lib 目录下除 flink-dist jar 之外的所有 jar 放到了 <code>userJarFiles</code> 中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">List&lt;URL&gt; classpaths = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;();</span><br><span class="line"><span class="keyword">if</span> (flinkJarPath != <span class="literal">null</span>) &#123;</span><br><span class="line">  File[] jars = <span class="keyword">new</span> <span class="title class_">File</span>(flinkJarPath).listFiles();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (File file : jars)&#123;</span><br><span class="line">    <span class="keyword">if</span> (file.toURI().toURL().toString().contains(<span class="string">&quot;flink-dist&quot;</span>))&#123;</span><br><span class="line">      clusterDescriptor.setLocalJarPath(<span class="keyword">new</span> <span class="title class_">Path</span>(file.toURI().toURL().toString()));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      classpaths.add(file.toURI().toURL());</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">RuntimeException</span>(<span class="string">&quot;The Flink jar path is null&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">clusterDescriptor.setProvidedUserJarFiles(classpaths);</span><br></pre></td></tr></table></figure>
+
+<p>这个过程中存在问题是，所有的插件 jar 在 flink lib 目录下都存在了一份，提交的作业时不管有没有使用到都会上传。</p>
+<p>理想的状态是，任务使用了哪些插件，就上传这些插件对应的 jar。</p>
+<p>任务使用了哪些插件，可以从任务配置文件中解析得到。这个解析过程，在<code>com.dtstack.flinkx.launcher.Launcher#analyzeUserClasspath</code>方法中已经完成，保存在<code>clusterSpecification.classpaths</code> 中。并且在后续获取 <code>PackagedProgram</code> 和 <code>JobGraph</code> 对象时，又保存到了各自对象的 <code>classpaths</code> 变量中。</p>
+<p>一个处理的方法是：</p>
+<ol>
+<li>将插件包从 flink lib 目录下删除</li>
+<li>上面上传 <code>userJarFiles</code> 表示的 jar 包之前，从 <code>jobGraph</code> 中获取了 <code>flinkx.jar</code>，可以做一个类似的操作，即：将 <code>jobGraph.classpath</code> 中的 jar （就是任务需要的插件包）一并添加到 <code>userJarFiles</code> 中，待后续上传。</li>
+<li>还有个方法，同事给出的，是在 <code>com.dtstack.flinkx.launcher.perjob.PerJobClusterClientBuilder#createPerJobClusterDescriptor</code>方法中设置 classpaths 时，从 clusterSpefication 中获取解析出的插件包添加到 classpaths 中。</li>
+</ol>
+<p>如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">List&lt;URL&gt; classpaths = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;();</span><br><span class="line">clusterSpecification.getClasspaths().forEach(jar-&gt;classpaths.add(jar));</span><br><span class="line"><span class="keyword">if</span> (flinkJarPath != <span class="literal">null</span>) &#123;</span><br><span class="line">  File[] jars = <span class="keyword">new</span> <span class="title class_">File</span>(flinkJarPath).listFiles();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> (File file : jars)&#123;</span><br><span class="line">    <span class="keyword">if</span> (file.toURI().toURL().toString().contains(<span class="string">&quot;flink-dist&quot;</span>))&#123;</span><br><span class="line">      clusterDescriptor.setLocalJarPath(<span class="keyword">new</span> <span class="title class_">Path</span>(file.toURI().toURL().toString()));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      classpaths.add(file.toURI().toURL());</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">RuntimeException</span>(<span class="string">&quot;The Flink jar path is null&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">clusterDescriptor.setProvidedUserJarFiles(classpaths);</span><br></pre></td></tr></table></figure>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>To persevere is important. Don't give up, don't give in. There's an answer to everything.</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/flinkx/"># flinkx</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/">flinkx 1.11 中使用远程 jar 遇到的问题与处理</a>
+            
+            
+            <a class="next" rel="next" href="/2022/10/30/mongo-%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C%E6%88%90%E5%8A%9F%E4%BD%86%E6%95%B0%E6%8D%AE%E9%87%8F%E4%B8%8D%E5%AF%B9/">mongo 任务执行成功但数据量不对</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
