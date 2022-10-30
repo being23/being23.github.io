@@ -15,7 +15,7 @@
 
 
 
-<title>recording &amp; rethinking</title>
+<title>mongo 任务执行成功但数据量不对 | recording &amp; rethinking</title>
 
 
 
@@ -125,7 +125,7 @@
     
     <article class="post-wrap">
         <header class="post-header">
-            <h1 class="post-title"></h1>
+            <h1 class="post-title">mongo 任务执行成功但数据量不对</h1>
             
                 <div class="post-meta">
                     
@@ -134,7 +134,7 @@
 
                     
                         <span class="post-time">
-                        Date: <a href="#">October 30, 2022&nbsp;&nbsp;11:55:20</a>
+                        Date: <a href="#">October 30, 2022&nbsp;&nbsp;12:05:53</a>
                         </span>
                     
                     
@@ -143,19 +143,22 @@
         </header>
 
         <div class="post-content">
-            <figure class="highlight subunit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">title: mongo 任务执行成功但数据量不对</span><br><span class="line">date: 2022<span class="string">-09</span><span class="string">-21</span> 11:25:10</span><br><span class="line"><span class="keyword">tags:</span></span><br><span class="line">- hive</span><br><span class="line">- flinkx</span><br></pre></td></tr></table></figure>
-
-<p>业务反馈了一个同步 hive 数据到 mongo 的作业，同步结束后，mongo 里面的数据量与 hive 的对不上，任务运行日志中有 118 条记录写失败了。<br>初看这个任务有一点奇怪：flinkx 中有一个数据量的检测机制，如果写失败了，错误记录数或者错误记录比例超过一定阈值，作业就失败了。这个作业有记录写失败了，为什么还是成功的呢？带着这个疑惑，重新看了下错误检测机制，分为两个部分：初始化和校验</p>
+            <p>业务反馈了一个同步 hive 数据到 mongo 的作业，同步结束后，mongo 里面的数据量与 hive 的对不上，任务运行日志中有 118 条记录写失败了。<br>初看这个任务有一点奇怪：flinkx 中有一个数据量的检测机制，如果写失败了，错误记录数或者错误记录比例超过一定阈值，作业就失败了。这个作业有记录写失败了，为什么还是成功的呢？带着这个疑惑，重新看了下错误检测机制，分为两个部分：初始化和校验</p>
 <p>在<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#open</code> 内部会调用方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#initStatisticsAccumulator</code>初始化累加器（比如错误记录数 <code>errCounter</code>），具体是通过 flink runtime 创建计数器，并将这些计数器添加到指标组中。</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">initStatisticsAccumulator</span><span class="params">()</span>&#123;</span><br><span class="line">  errCounter = context.getLongCounter(Metrics.NUM_ERRORS);</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">  outputMetric = <span class="keyword">new</span> <span class="title class_">BaseMetric</span>(context);</span><br><span class="line">  outputMetric.addMetric(Metrics.NUM_ERRORS, errCounter);</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">  startTime = System.currentTimeMillis();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>然后调用方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#initAccumulatorCollector</code>初始话计数器收集器<code>accumulatorCollector</code>，内部会启动一个定时任务，执行方法<code>com.dtstack.flinkx.metrics.AccumulatorCollector#collectAccumulatorWithApi</code>从 JM 获取计数器的值。<br>校验过程有两处：每一行数据写之前；以及所有数据写完。<br>写之前是在方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#writeSingleRecord</code>中</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">writeSingleRecord</span><span class="params">(Row row)</span> &#123;</span><br><span class="line">  <span class="keyword">if</span>(errorLimiter != <span class="literal">null</span>) &#123;</span><br><span class="line">    errorLimiter.acquire();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    writeSingleRecordInternal(row);</span><br><span class="line">  &#125; </span><br><span class="line">  <span class="comment">//...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>这里先调用方法<code>com.dtstack.flinkx.writer.ErrorLimiter#acquire</code>获取错误的情况，</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">acquire</span><span class="params">()</span> &#123;</span><br><span class="line">  <span class="type">String</span> <span class="variable">errorDataStr</span> <span class="operator">=</span> <span class="string">&quot;&quot;</span>;</span><br><span class="line">  <span class="keyword">if</span>(errorData != <span class="literal">null</span>)&#123;</span><br><span class="line">    errorDataStr = errorData.toString() + <span class="string">&quot;\n&quot;</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="type">long</span> <span class="variable">errors</span> <span class="operator">=</span> accumulatorCollector.getAccumulatorValue(Metrics.NUM_ERRORS);</span><br><span class="line">  <span class="keyword">if</span>(maxErrors != <span class="literal">null</span> &amp;&amp; !maxErrors.equals(<span class="number">0</span>))&#123;</span><br><span class="line">    Preconditions.checkArgument(errors &lt;= maxErrors, <span class="string">&quot;WritingRecordError: error writing record [&quot;</span> + errors + <span class="string">&quot;] exceed limit [&quot;</span> + maxErrors</span><br><span class="line">                                + <span class="string">&quot;]\n&quot;</span> + errorDataStr + errMsg);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span>(maxErrorRatio != <span class="literal">null</span>)&#123;</span><br><span class="line">    <span class="type">long</span> <span class="variable">numRead</span> <span class="operator">=</span> accumulatorCollector.getAccumulatorValue(Metrics.NUM_READS);</span><br><span class="line">    <span class="keyword">if</span>(numRead &gt;= <span class="number">1</span>) &#123;</span><br><span class="line">      errorRatio = (<span class="type">double</span>) errors / numRead;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Preconditions.checkArgument(errorRatio &lt;= maxErrorRatio, <span class="string">&quot;WritingRecordError: error writing record ratio [&quot;</span> + errorRatio + <span class="string">&quot;] exceed limit [&quot;</span> + maxErrorRatio</span><br><span class="line">                                + <span class="string">&quot;]\n&quot;</span> + errorDataStr + errMsg);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>从计数器收集器<code>accumulatorCollector</code>中获取错误数<code>errors</code>和错误比例（错误数&#x2F;读取数）<code>errorRatio = (**double**) errors / numRead</code>。如果超过最大错误数<code>maxErrors</code>或者最大错误比例<code>maxErrorRatio</code>，抛出异常。<br>由于上面的检测是在写之前，对于最后一次写，还是有可能失败的，所以写完之后，又有一次检测，也是调用方法<code>com.dtstack.flinkx.writer.ErrorLimiter#acquire</code>。具体是在方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#checkErrorLimit</code>中，由<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#close</code>方法调用。<br>至此，错误检测机制说明白了。那为什么没有生效呢？可能的原因就是检测条件不成立，即<code>maxErrors</code>为 null 或者 0；<code>maxErrorRatio</code> 为 null。顺着这个思路找到这两个值初始化的源头，<code>com.dtstack.flinkx.mongodb.writer.MongodbWriter#writeData</code></p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> DataStreamSink&lt;?&gt; writeData(List&lt;DataStream&lt;Row&gt;&gt; dataSets) &#123;</span><br><span class="line">  <span class="type">MongodbOutputFormatBuilder</span> <span class="variable">builder</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">MongodbOutputFormatBuilder</span>();</span><br><span class="line"></span><br><span class="line">  builder.setMongodbConfig(mongodbConfig);</span><br><span class="line">  builder.setColumns(columns);</span><br><span class="line">  builder.setMonitorUrls(monitorUrls);</span><br><span class="line">  builder.setErrors(errors);</span><br><span class="line">  builder.setDirtyPath(dirtyPath);</span><br><span class="line">  builder.setDirtyHadoopConfig(dirtyHadoopConfig);</span><br><span class="line">  builder.setSrcCols(srcCols);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> createOutput(dataSets, builder.finish());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>看到这里处理了 <code>errors</code>，没有处理<code>errorRatio</code>。而<code>errors</code>是从南天门给的配置中获取的，取值为 0。如此两个检测条件都不成立，所以任务没有失败。</p>
 <figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">&quot;errorLimit&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;percentage&quot;</span><span class="punctuation">:</span> <span class="number">0.01</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;record&quot;</span><span class="punctuation">:</span> <span class="number">0</span></span><br><span class="line"><span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br></pre></td></tr></table></figure>
+
         </div>
 
         
@@ -182,6 +185,12 @@
                 <span>Tag(s):</span>
                 <span class="tag">
                     
+                    
+                        <a href="/tags/flinkx/"># flinkx</a>
+                    
+                        <a href="/tags/hive/"># hive</a>
+                    
+                        
                 </span>
             </div>
             <div>
