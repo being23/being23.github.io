@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>mahout推荐源码阅读笔记2 | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    var tocbot_timer;
+    var DEPTH_MAX = 6; // 为 6 时展开所有
+    var tocbot_default_config = {
+        tocSelector: '.tocbot-list',
+        contentSelector: '.post-content',
+        headingSelector: 'h1, h2, h3, h4, h5',
+        orderedList: false,
+        scrollSmooth: true,
+        onClick: extend_click,
+    };
+
+    function extend_click() {
+        clearTimeout(tocbot_timer);
+        tocbot_timer = setTimeout(function() {
+            tocbot.refresh(obj_merge(tocbot_default_config, {
+                hasInnerContainers: true
+            }));
+        }, 420); // 这个值是由 tocbot 源码里定义的 scrollSmoothDuration 得来的
+    }
+
+    document.ready(function() {
+        tocbot.init(obj_merge(tocbot_default_config, {
+            collapseDepth: 1
+        }));
+    });
+
+    function expand_toc() {
+        var b = document.querySelector('.tocbot-toc-expand');
+        var expanded = b.getAttribute('data-expanded');
+        expanded ? b.removeAttribute('data-expanded') : b.setAttribute('data-expanded', true);
+        tocbot.refresh(obj_merge(tocbot_default_config, {
+            collapseDepth: expanded ? 1 : DEPTH_MAX
+        }));
+        b.innerText = expanded ? 'Expand all' : 'Collapse all';
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function obj_merge(target, source) {
+        for (var item in source) {
+            if (source.hasOwnProperty(item)) {
+                target[item] = source[item];
+            }
+        }
+        return target;
+    }
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">mahout推荐源码阅读笔记2</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">July 26, 2014&nbsp;&nbsp;23:41:00</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h2 id="2-RowSimilarityJob"><a href="#2-RowSimilarityJob" class="headerlink" title="2. RowSimilarityJob"></a>2. RowSimilarityJob</h2><p>继续上一篇日志，这里介绍相似度计算<code>RowSimilarityJob</code>。这个job也是在<code>RecommenderJob</code>中，通过<code>ToolRunner</code>的<code>run</code>方法进行调用。</p>
+<pre><code>//calculate the co-occurrence matrix
+ToolRunner.run(getConf(), new RowSimilarityJob(), new String[]&#123;
+    &quot;--input&quot;, new Path(prepPath, PreparePreferenceMatrixJob.RATING_MATRIX).toString(),
+    &quot;--output&quot;, similarityMatrixPath.toString(),
+    &quot;--numberOfColumns&quot;, String.valueOf(numberOfUsers),
+    &quot;--similarityClassname&quot;, similarityClassname,
+    &quot;--maxObservationsPerRow&quot;, String.valueOf(maxPrefsInItemSimilarity),
+    &quot;--maxObservationsPerColumn&quot;, String.valueOf(maxPrefsInItemSimilarity),
+    &quot;--maxSimilaritiesPerRow&quot;, String.valueOf(maxSimilaritiesPerItem),
+    &quot;--excludeSelfSimilarity&quot;, String.valueOf(Boolean.TRUE),
+    &quot;--threshold&quot;, String.valueOf(threshold),
+    &quot;--randomSeed&quot;, String.valueOf(randomSeed),
+    &quot;--tempDir&quot;, getTempPath().toString(),
+&#125;);
+</code></pre>
+<p>这里输入目录是<code>PreparePreferenceMatrixJob</code>的输出子目录<code>ratingMatrix</code>，输出目录是临时目录的子目录<code>similatiryMatrix</code>。还有一些其他选项，这些选项在具体job中再细说。</p>
+<p><code>RowSimilarityJob</code>同样继承自<code>AbstractJob</code>，在<code>run</code>方法中，开始是选项定义和设置，然后是4个<code>prepareJob</code>方法，下面挨个介绍。</p>
+<h3 id="2-1-计算每个用户的物品数目"><a href="#2-1-计算每个用户的物品数目" class="headerlink" title="2.1. 计算每个用户的物品数目"></a>2.1. 计算每个用户的物品数目</h3><p>第一个<code>prepareJob</code>如下：</p>
+<pre><code>Job countObservations = prepareJob(getInputPath(), getTempPath(&quot;notUsed&quot;), CountObservationsMapper.class,
+    NullWritable.class, VectorWritable.class, SumObservationsReducer.class, NullWritable.class,
+    VectorWritable.class);
+</code></pre>
+<p>输入目录是<code>ratingMatrix</code>，输出目录是临时目录的子目录<code>notUsed</code>。mapper和reducer分别是<code>CountObservationsMapper</code>和<code>SumObservationsReducer</code>。</p>
+<p>mapper的输入输出</p>
+<table>
+<thead>
+<tr>
+<th align="left">输入</th>
+<th align="left">输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">item-&gt;(userid,prefval)</td>
+<td align="left">null-&gt;(userid, counts)</td>
+</tr>
+</tbody></table>
+<pre><code>public static class CountObservationsMapper extends Mapper&lt;IntWritable,VectorWritable,NullWritable,VectorWritable&gt; &#123;
+
+    private Vector columnCounts = new RandomAccessSparseVector(Integer.MAX_VALUE);
+
+    @Override
+    protected void map(IntWritable rowIndex, VectorWritable rowVectorWritable, Context ctx)
+      throws IOException, InterruptedException &#123;
+
+      Vector row = rowVectorWritable.get();
+      for (Vector.Element elem : row.nonZeroes()) &#123;
+        columnCounts.setQuick(elem.index(), columnCounts.getQuick(elem.index()) + 1);
+      &#125;
+    &#125;
+
+    @Override
+    protected void cleanup(Context ctx) throws IOException, InterruptedException &#123;
+      ctx.write(NullWritable.get(), new VectorWritable(columnCounts));
+    &#125;
+&#125;
+</code></pre>
+<p>这里计算每个用户的评价物品数目。做这一步的目的是用于后续的采样。</p>
+<p>reducer这里没有调用ctx的<code>write</code>方法输出，而是调用<code>Vectors</code>的<code>write</code>方法直接写到临时目录下的文件<code>observationsPerColumn.bin</code>中，这个文件不能通过<code>hadoop fs -cat</code>显示内容，<code>Vectors</code>提供了一个<code>read</code>方法可以读取这个文件。</p>
+<pre><code>public static class SumObservationsReducer extends Reducer&lt;NullWritable,VectorWritable,NullWritable,VectorWritable&gt; &#123;
+    @Override
+    protected void reduce(NullWritable nullWritable, Iterable&lt;VectorWritable&gt; partialVectors, Context ctx)
+    throws IOException, InterruptedException &#123;
+      Vector counts = Vectors.sum(partialVectors.iterator());
+      Vectors.write(counts, new Path(ctx.getConfiguration().get(OBSERVATIONS_PER_COLUMN_PATH)), ctx.getConfiguration());
+    &#125;
+&#125;
+</code></pre>
+<p>通过下面的代码读取文件<code>observationsPerColumn.bin</code>:</p>
+<pre><code>import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import junit.framework.TestCase;
+import org.apache.mahout.math.Vector;
+import org.apache.mahout.math.hadoop.similarity.cooccurrence.Vectors;
+
+public class myreader extends TestCase &#123;
+        String path2 = &quot;hdfs://namenode0:9000/theme/temp/0715/observationsPerColumn.bin&quot;;
+        Vector vec = Vectors.read(new Path(path2), conf);
+        System.out.print(vec.toString());
+    &#125;
+&#125;
+</code></pre>
+<p>文件内容如下：5:6.0 表示用户5评价了6个物品</p>
+<pre><code>&#123;5:6.0,4:4.0,3:4.0,2:4.0,1:3.0&#125;
+</code></pre>
+<h3 id="2-2-向量归一化"><a href="#2-2-向量归一化" class="headerlink" title="2.2. 向量归一化"></a>2.2. 向量归一化</h3><p>继续第二个<code>prepareJob</code>：</p>
+<pre><code>  Job normsAndTranspose = prepareJob(getInputPath(), weightsPath, VectorNormMapper.class, IntWritable.class,
+      VectorWritable.class, MergeVectorsReducer.class, IntWritable.class, VectorWritable.class);
+  
+</code></pre>
+<p>输入目录还是<code>ratingMatrix</code>，输出目录是临时目录的子目录<code>weights</code>，mapper和reducer分别是<code>VectorNormMapper</code>和<code>MergeVectorsReducer</code>。 </p>
+<p><code>VectorNormMapper</code>定义了一堆向量和参数。在<code>setup</code>函数中，初始化向量和设置参数。<code>observationsPerColumn</code>用来存储上一步中获取的每个用户的评价物品数目，是一个map结构。</p>
+<p>接下来是采样函数<code>sampleDown</code>，解释下其实现中三个变量的作用：通过命令行设置的<code>maxObservationsPerRow</code>和<code>maxObservationsPerColumn</code>，以及在<code>setup</code>函数中设置的<code>observationsPerColumn</code>。进入函数，首先计算出<code>rowSampleRate</code>，这表示对于某一个物品而言最多考虑多少个用户的评分，然后进入for循环，取得每一个用户的userid，以此作为key到<code>observationsPerColumn</code>取得评价过的物品数，最终计算出<code>columnSampleRate</code>，这表示对于某一个用户而言最多考虑多少个物品。然后调用<code>random.nextDouble()</code>生成一个范围在0-1之间服从均匀分布的随机数，并与<code>rowSampleRate</code>和<code>columnSampleRate</code>的较小值做比较，这就达到了采样的目的，同时记录使用的项目数<code>usedObservations</code>和忽略掉的项目数<code>neglectedObservations</code>。</p>
+<p>mapper的输入输出</p>
+<table>
+<thead>
+<tr>
+<th align="left">输入</th>
+<th align="left">输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">itemid-&gt;(itemid,prefval)</td>
+<td align="left">userid-&gt;(itemid,prefval)</td>
+</tr>
+</tbody></table>
+<pre><code>protected void map(IntWritable row, VectorWritable vectorWritable, Context ctx)
+  throws IOException, InterruptedException &#123;
+
+  Vector sampledRowVector = sampleDown(vectorWritable.get(), ctx);
+
+  Vector rowVector = similarity.normalize(sampledRowVector);
+
+  int numNonZeroEntries = 0;
+  double maxValue = Double.MIN_VALUE;
+
+  for (Vector.Element element : rowVector.nonZeroes()) &#123;
+    RandomAccessSparseVector partialColumnVector = new RandomAccessSparseVector(Integer.MAX_VALUE);
+    partialColumnVector.setQuick(row.get(), element.get());
+    ctx.write(new IntWritable(element.index()), new VectorWritable(partialColumnVector));
+
+    numNonZeroEntries++;
+    if (maxValue &lt; element.get()) &#123;
+      maxValue = element.get();
+    &#125;
+  &#125;
+
+  if (threshold != NO_THRESHOLD) &#123;
+    nonZeroEntries.setQuick(row.get(), numNonZeroEntries);
+    maxValues.setQuick(row.get(), maxValue);
+  &#125;
+  norms.setQuick(row.get(), similarity.norm(rowVector));
+
+  ctx.getCounter(Counters.ROWS).increment(1);
+&#125;
+</code></pre>
+<p>调用<code>sampleDown</code>进行采样，由于<code>maxObservationsPerRow</code>和<code>maxObservationsPerColumn</code>没有在命令行指定，使用默认值500，远大于测试数据的用户数5和物品数7，所以这里没有作用。接着调用<code>normalize</code>，这个方法是在接口<code>VectorSimilarityMeasure</code>中定义的。这里指定的相似度计算准则是<code>SIMILARITY_COOCCURRENCE</code>，在<code>setup</code>函数中会实例化类<code>CooccurrenceCountSimilarity</code>的一个对象到变量<code>similarity</code>。<code>CooccurrenceCountSimilarity</code>没有实现该方法，在它的父类<code>CountbasedMeasure</code>中有实现——什么也不做，原封不动的返回输入。for循环中，完成itemid-&gt;(userid,prefval)到userid-&gt;(itemid,prefval)的转换，同时记录非零元素的个数<code>numNonZeroEntries</code>和最大值<code>maxValue</code>。<code>threshold</code>取默认值，if条件不成立，<code>nonZeroEntries</code>和<code>maxValues</code>最终都是空向量。<code>norms</code>向量中保存的是每个向量的范数，这里取得是向量中元素的个数。</p>
+<pre><code>protected void cleanup(Context ctx) throws IOException, InterruptedException &#123;
+  ctx.write(new IntWritable(NORM_VECTOR_MARKER), new VectorWritable(norms));
+  ctx.write(new IntWritable(NUM_NON_ZERO_ENTRIES_VECTOR_MARKER), new VectorWritable(nonZeroEntries));
+  ctx.write(new IntWritable(MAXVALUE_VECTOR_MARKER), new VectorWritable(maxValues));
+&#125;
+</code></pre>
+<p><code>cleanup</code>函数，reducer中会根据这里指定的key，将<code>norms</code>、<code>nonZeroEntries</code>、<code>maxValues</code>写到各自的目录。</p>
+<p><code>MergeVectorsReducer</code>中声明了3个路径，并在<code>setup</code>函数中初始化。reducer的输入输出：</p>
+<table>
+<thead>
+<tr>
+<th align="left">输入</th>
+<th align="left">输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">userid-&gt;(itemid,prefval)</td>
+<td align="left">userid-&gt;(itemid,prefval)</td>
+</tr>
+</tbody></table>
+<pre><code>protected void reduce(IntWritable row, Iterable&lt;VectorWritable&gt; partialVectors, Context ctx)
+  throws IOException, InterruptedException &#123;
+  Vector partialVector = Vectors.merge(partialVectors);
+
+  if (row.get() == NORM_VECTOR_MARKER) &#123;
+    Vectors.write(partialVector, normsPath, ctx.getConfiguration());
+  &#125; else if (row.get() == MAXVALUE_VECTOR_MARKER) &#123;
+    Vectors.write(partialVector, maxValuesPath, ctx.getConfiguration());
+  &#125; else if (row.get() == NUM_NON_ZERO_ENTRIES_VECTOR_MARKER) &#123;
+    Vectors.write(partialVector, numNonZeroEntriesPath, ctx.getConfiguration(), true);
+  &#125; else &#123;
+    ctx.write(row, new VectorWritable(partialVector));
+  &#125;
+&#125;
+</code></pre>
+<p>由于<code>nonZeroEntries</code>和<code>maxValues</code>是空向量，只有<code>norms</code>向量有值，采用类似于2.1中的做法可以看到<code>norms</code>的内容，就是1.3中每个评分向量的元素个数</p>
+<pre><code>&#123;107:1.0,106:2.0,105:2.0,104:4.0,103:4.0,102:3.0,101:5.0&#125;
+</code></pre>
+<p>最后，这一步的输出是</p>
+<pre><code>[root@datanode1 bin]# hadoop fs -libjars ../examples/target/mahout-examples-0.9-job.jar -text /theme/temp/0715/weights/part-r-00000
+Warning: $HADOOP_HOME is deprecated.
+
+1       &#123;101:5.0,103:2.5,102:3.0&#125;
+2       &#123;102:2.5,103:5.0,101:2.0,104:2.0&#125;
+3       &#123;107:5.0,105:4.5,101:2.5,104:4.0&#125;
+4       &#123;106:4.0,101:5.0,103:3.0,104:4.5&#125;
+5       &#123;106:4.0,104:4.0,103:2.0,105:3.5,101:4.0,102:3.0&#125;
+</code></pre>
+<h3 id="2-3-计算相似度"><a href="#2-3-计算相似度" class="headerlink" title="2.3. 计算相似度"></a>2.3. 计算相似度</h3><p>第三个<code>prepareJob</code>：</p>
+<pre><code>Job pairwiseSimilarity = prepareJob(weightsPath, pairwiseSimilarityPath, CooccurrencesMapper.class,
+  IntWritable.class, VectorWritable.class, SimilarityReducer.class, IntWritable.class, VectorWritable.class);
+pairwiseSimilarity.setCombinerClass(VectorSumReducer.class);
+</code></pre>
+<p>输入目录是上一步的输出目录<code>weights</code>，输出目录是临时目录的子目录<code>pairwiseSimilarity</code>，mapper和reducer分别是<code>CooccurrencesMapper</code>和<code>SimilarityReducer</code>。</p>
+<p><code>CooccurencesMapper</code>中声明了变量<code>numNonZeroEntries</code>、<code>maxValues</code>和<code>threshold</code>，并在<code>setup</code>函数初始化。<code>numNonZeroEntries</code>和<code>maxValues</code>是空值，<code>threshold</code>由于命令没有指明该选项，是默认值。函数<code>consider</code>这里没有用，因为<code>if (threhold == NO_THRESHOLD)</code>总是成立，短路了。</p>
+<table>
+<thead>
+<tr>
+<th align="left">输入</th>
+<th align="left">输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">userid-&gt;(itemid,prefval)</td>
+<td align="left">itemid-&gt;(itemid, aggregate)</td>
+</tr>
+</tbody></table>
+<pre><code>protected void map(IntWritable column, VectorWritable occurrenceVector, Context ctx)
+  throws IOException, InterruptedException &#123;
+  Vector.Element[] occurrences = Vectors.toArray(occurrenceVector);
+  Arrays.sort(occurrences, BY_INDEX);
+
+  int cooccurrences = 0;
+  int prunedCooccurrences = 0;
+  for (int n = 0; n &lt; occurrences.length; n++) &#123;
+    Vector.Element occurrenceA = occurrences[n];
+    Vector dots = new RandomAccessSparseVector(Integer.MAX_VALUE);
+    for (int m = n; m &lt; occurrences.length; m++) &#123;
+      Vector.Element occurrenceB = occurrences[m];
+      if (threshold == NO_THRESHOLD || consider(occurrenceA, occurrenceB)) &#123;
+        dots.setQuick(occurrenceB.index(), similarity.aggregate(occurrenceA.get(), occurrenceB.get()));
+        cooccurrences++;
+      &#125; else &#123;
+        prunedCooccurrences++;
+      &#125;
+    &#125;
+    ctx.write(new IntWritable(occurrenceA.index()), new VectorWritable(dots));
+  &#125;
+  ctx.getCounter(Counters.COOCCURRENCES).increment(cooccurrences);
+  ctx.getCounter(Counters.PRUNED_COOCCURRENCES).increment(prunedCooccurrences);
+&#125;
+</code></pre>
+<p>取出向量<code>occurrneces</code>(itemid-&gt;pref)，按照itemid排序。之后两个for循环遍历，用来获取不同item之间的相似度(?)。由于<code>threshold</code>取默认值<code>NO_THRESHOLD</code>，条件总是成立，<code>consider</code>函数不会被调用。<code>aggregate</code>函数简单返回1，表示两个物品共同出现一次。变量<code>cooccurrences</code>和<code>prunedCooccurrences</code>分别用于计数成对出现的物品数和忽略掉的成对物品数目。</p>
+<p>reducer的输入输出</p>
+<table>
+<thead>
+<tr>
+<th align="left">输入</th>
+<th align="left">输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">index-&gt;(index, aggregate)</td>
+<td align="left">index-&gt;(index, similarity)</td>
+</tr>
+</tbody></table>
+<pre><code>protected void reduce(IntWritable row, Iterable&lt;VectorWritable&gt; partialDots, Context ctx)
+  throws IOException, InterruptedException &#123;
+  Iterator&lt;VectorWritable&gt; partialDotsIterator = partialDots.iterator();
+  Vector dots = partialDotsIterator.next().get();
+  while (partialDotsIterator.hasNext()) &#123;
+    Vector toAdd = partialDotsIterator.next().get();
+    for (Element nonZeroElement : toAdd.nonZeroes()) &#123;
+      dots.setQuick(nonZeroElement.index(), dots.getQuick(nonZeroElement.index()) + nonZeroElement.get());
+    &#125;
+  &#125;
+
+  Vector similarities = dots.like();
+  double normA = norms.getQuick(row.get());
+  for (Element b : dots.nonZeroes()) &#123;
+    double similarityValue = similarity.similarity(b.get(), normA, norms.getQuick(b.index()), numberOfColumns);
+    if (similarityValue &gt;= treshold) &#123;
+      similarities.set(b.index(), similarityValue);
+    &#125;
+  &#125;
+  if (excludeSelfSimilarity) &#123;
+    similarities.setQuick(row.get(), 0);
+  &#125;
+  ctx.write(row, new VectorWritable(similarities));
+&#125;
+</code></pre>
+<p>首先通过while循环进行一次累加，例如101-&gt;(102, 1), 101-&gt;(102, 1)经过累加后变成101-&gt;(102, 2)。然后调用函数<code>similarity</code>，这里只是简单的返回<code>b.get()</code>，即共同出现次数。接着判断是否排除自己，<code>excludeSelfSimilarity</code>为ture，<code>similarites</code>类型是<code>RandomAccessSparseVector</code>，这个类的<code>setQuick</code>方法中会判断参数<code>value</code>，如果是0，移除相应的key。</p>
+<p><strong>方法<code>aggregate</code>和<code>similarity</code>有什么区别</strong></p>
+<p>reducer的输出是：</p>
+<pre><code>[root@datanode1 bin]# hadoop fs -libjars ../examples/target/mahout-examples-0.9-job.jar -text /theme/temp/0715/pairwiseSimilarity/part-r-00000
+Warning: $HADOOP_HOME is deprecated.
+
+101     &#123;106:2.0,104:4.0,103:4.0,105:2.0,107:1.0,102:3.0&#125;
+102     &#123;106:1.0,104:2.0,103:3.0,105:1.0&#125;
+103     &#123;106:2.0,105:1.0,104:3.0&#125;
+104     &#123;106:2.0,105:2.0,107:1.0&#125;
+105     &#123;107:1.0,106:1.0&#125;
+106     &#123;&#125;
+107     &#123;&#125;
+</code></pre>
+<blockquote>
+<p>说明： 也许你已经注意到上面的输出中作为value的向量，其中index都是大于key，比如对于key＝102来说，它的值向量中没有index＝101的元素。原因在于map中按照index做了排序（<code>Arrays.sort(occurrences, BY_INDEX);</code>）。</p>
+</blockquote>
+<h3 id="2-4-计算协同矩阵"><a href="#2-4-计算协同矩阵" class="headerlink" title="2.4. 计算协同矩阵"></a>2.4. 计算协同矩阵</h3><p>第四个<code>prepareJob</code>:</p>
+<pre><code>Job asMatrix = prepareJob(pairwiseSimilarityPath, getOutputPath(), UnsymmetrifyMapper.class,
+  IntWritable.class, VectorWritable.class, MergeToTopKSimilaritiesReducer.class, IntWritable.class,
+  VectorWritable.class);
+      
+</code></pre>
+<p>输入目录是上一步的输出目录<code>pairwiseSimilarity</code>，输出目录是临时目录的子目录<code>similarityMatrix</code>，mapper和reducer分别是<code>UnsymmetrifyMapper</code>和<code>MergeToTopKSimilaritiesReducer</code>。</p>
+<p><code>UnsymmetrifyMapper</code>定义了变量<code>maxSimilaritiesPerRow</code>，表示对于某个item，最多考虑<code>maxSimilaritiesPerRow</code>个其他item之间的相似度。<code>setup</code>中初始化<code>maxSimilaritiesPerRow</code>，默认值500。</p>
+<p>mapper输入输出</p>
+<table>
+<thead>
+<tr>
+<th align="left">输入</th>
+<th align="left">输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">index-&gt;(index, similarity)</td>
+<td align="left">index-&gt;(index, similarity)</td>
+</tr>
+</tbody></table>
+<pre><code>protected void map(IntWritable row, VectorWritable similaritiesWritable, Context ctx)
+  throws IOException, InterruptedException &#123;
+  Vector similarities = similaritiesWritable.get();
+  // For performance, the creation of transposedPartial is moved out of the while loop and it is reused inside
+  Vector transposedPartial = new RandomAccessSparseVector(similarities.size(), 1);
+  TopElementsQueue topKQueue = new TopElementsQueue(maxSimilaritiesPerRow);
+  for (Element nonZeroElement : similarities.nonZeroes()) &#123;
+    MutableElement top = topKQueue.top();
+    double candidateValue = nonZeroElement.get();
+    if (candidateValue &gt; top.get()) &#123;
+      top.setIndex(nonZeroElement.index());
+      top.set(candidateValue);
+      topKQueue.updateTop();
+    &#125;
+
+    transposedPartial.setQuick(row.get(), candidateValue);
+    ctx.write(new IntWritable(nonZeroElement.index()), new VectorWritable(transposedPartial));
+    transposedPartial.setQuick(row.get(), 0.0);
+  &#125;
+  Vector topKSimilarities = new RandomAccessSparseVector(similarities.size(), maxSimilaritiesPerRow);
+  for (Vector.Element topKSimilarity : topKQueue.getTopElements()) &#123;
+    topKSimilarities.setQuick(topKSimilarity.index(), topKSimilarity.get());
+  &#125;
+  ctx.write(row, new VectorWritable(topKSimilarities));
+&#125;
+</code></pre>
+<p>这个map的实现有点绕，其中有两处调用<code>ctx.write</code>，分别在两个for循环中。</p>
+<p>先看第一个for循环，这里将某个itemA-&gt;(itemB, similarity)转成itemB-&gt;(itemA, similarity)，这是因为在上一个job的map两层for循环中，第二层for循环从<code>m=n</code>开始，漏掉了itemB与itemA之间的相似度。举个例子，有这样数据101-&gt;(101:1, 102:1, 103:1, 104:1)，在第二层for循环中，第一次遍历的时候会产生 (101, 101) (101, 102) (101, 103) (101, 104)，第二次遍历的时候会产生 (102:102, 102:103, 102:104)，漏掉了(102:101)。同时在这个循环中，将输入向量<code>similaritiesWritable</code>的前<code>maxSimilaritiesPerRow</code>个最大值保存到<code>topKQueue</code>中。</p>
+<p>继续看第二个for循环，这里将<code>topKQueue</code>中的数据挨个添加到向量<code>topKSimilarities</code>中，达到有序的目的。</p>
+<p>reducer输入输出函数</p>
+<table>
+<thead>
+<tr>
+<th align="left">输入</th>
+<th align="left">输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">index-&gt;(index, similarity)</td>
+<td align="left">index-&gt;(index, similarity)</td>
+</tr>
+</tbody></table>
+<pre><code>protected void reduce(IntWritable row, Iterable&lt;VectorWritable&gt; partials, Context ctx)
+  throws IOException, InterruptedException &#123;
+  Vector allSimilarities = Vectors.merge(partials);
+  Vector topKSimilarities = Vectors.topKElements(maxSimilaritiesPerRow, allSimilarities);
+  ctx.write(row, new VectorWritable(topKSimilarities));
+&#125;
+</code></pre>
+<p>调用<code>merge</code>函数将同一个itemid的对应的多个协同子向量<code>merge</code>到同一个协同向量中。然后取<code>maxSimilaritiesPerRow</code>个最大值。</p>
+<p>这一步的输出如下：</p>
+<pre><code>[root@datanode1 bin]# hadoop fs -libjars ../examples/target/mahout-examples-0.9-job.jar -text /theme/temp/0715/similarityMatrix/part-r-00000
+Warning: $HADOOP_HOME is deprecated.
+
+101     &#123;106:2.0,104:4.0,103:4.0,105:2.0,107:1.0,102:3.0&#125;
+102     &#123;105:1.0,103:3.0,106:1.0,101:3.0,104:2.0&#125;
+103     &#123;102:3.0,105:1.0,106:2.0,101:4.0,104:3.0&#125;
+104     &#123;106:2.0,103:3.0,105:2.0,101:4.0,107:1.0,102:2.0&#125;
+105     &#123;106:1.0,104:2.0,103:1.0,101:2.0,107:1.0,102:1.0&#125;
+106     &#123;102:1.0,105:1.0,103:2.0,101:2.0,104:2.0&#125;
+107     &#123;101:1.0,105:1.0,104:1.0&#125;
+</code></pre>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>smilenceee</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="http://yoursite.com/mahout%E6%8E%A8%E8%8D%90%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B02/">http://yoursite.com/mahout%E6%8E%A8%E8%8D%90%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B02/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/recommendation/"># recommendation</a>
+                    
+                        <a href="/tags/mahout/"># mahout</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/mahout%E6%8E%A8%E8%8D%90%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B03/">mahout推荐源码阅读笔记3</a>
+            
+            
+            <a class="next" rel="next" href="/mahout%E6%8E%A8%E8%8D%90%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B01/">mahout推荐源码阅读笔记1</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

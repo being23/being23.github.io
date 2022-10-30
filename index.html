@@ -1,415 +1,156 @@
 <!DOCTYPE html>
-<html>
+<html lang="">
 
 <head>
-  <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
-  <title>being23</title>
-  <meta name="description" content="写给未来的自己" />
-  <meta name="HandheldFriendly" content="True" />
-  <meta name="MobileOptimized" content="320" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-  <link rel="stylesheet" type="text/css" href="/css/screen.css" />
-  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400" />
-
-  <meta name="generator" content="being23">
-
-  
-  
-  
-
-  
-</head>
+    <meta name="author" content="smilenceee">
 
 
-<body class="home-template">
+    <meta name="subtitle" content="to myself">
 
-  <header class="site-head" >
-    <div class="vertical">
-        <div class="site-head-content inner">
-             <a class="blog-logo" href="/"><img src="/img/logo.png" alt="Blog Logo"/></a> 
-            <h1 class="blog-title">being23</h1>
-            <h2 class="blog-description">写给未来的自己</h2>
+
+
+
+<title>recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                
+    <div class="container profile-container">
+    <div class="intro">
+        <div class="avatar">
+            <a href="/archives"><img src="/image/avatar.jpeg"></a>
+        </div>
+        <div class="nickname">SMILENCEEE</div>
+        <div class="description"><p>RECORDING &amp; RETHINKING</p>
+</div>
+        <div class="links">
+            
+                
+                    <a class="link-item" title="Blog" href="/archives">
+                        
+                        
+                            <i class="iconfont icon-blog"></i>
+                        
+                    </a>
+                
+            
         </div>
     </div>
-</header>
-  
-<main class="content" role="main">
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2017-01-14T12:51:18.000Z" itemprop="datePublished">
-          2017-01-14
-      </time>
-    
-    
-    | 
-    <a href='/tags/channel/'>channel</a>,
-    
-    <a href='/tags/golang/'>golang</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2017/01/14/Golang Channels/">Golang Channels</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        原文见Channels in Golang
-Channels是Golang的重要特性，也是Golang独树一帜的特征之一。Channels使得并发编程更容易（至少看起来），灵活以及有趣。
-本文给出channel相关的概念，语法和规则。
-概念与语法Channel介绍Channel可以看作是程序内部的FIFO消息队列。使用Channel的目的是传输值，具体是指，在不同的goroutines之间传递值的所属。良好设计的代码应该保证在任何时刻任
-      
-      </p>
-      
-      <p>
-          <a href="/2017/01/14/Golang Channels/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2017-01-11T16:37:00.000Z" itemprop="datePublished">
-          2017-01-12
-      </time>
-    
-</span>
-      <h2 class="post-title"><a href="/2017/01/12/2016总结/">2016总结</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        关于生活时光之里，南山北海；你我之间，人来人往。
-2月底，从老家回到大新的当晚腹痛，大半夜骥哥陪我去了南山医院，后诊断为肾结石，所幸是可以做超声波碎石，免受皮肉之苦。两次超声手术后排出，前前后后十来天。印象最深的是有一晚，痛得无法入睡，捂着肚子，蹲在地上，跟豆芽喵对望，忍到第二天清晨早饭没吃饿着肚子一个人去医院做造影，当护士将混着碘剂的盐水用注射器从静脉打进身体里时，那股寒意一直蔓延直到内心。后面爸妈不放心，从老家过来照顾了一周。￼
-4
-      
-      </p>
-      
-      <p>
-          <a href="/2017/01/12/2016总结/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2016-03-13T03:45:18.000Z" itemprop="datePublished">
-          2016-03-13
-      </time>
-    
-    
-    | 
-    <a href='/tags/ELK/'>ELK</a>,
-    
-    <a href='/tags/Kafka/'>Kafka</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2016/03/13/部署ELK遇到的若干问题备忘/">部署ELK遇到的若干问题备忘</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        最近部署了一套ELK，用于生产环境中实时检索上报的信息。期间遇到的一些问题，这里纪录下来。
-
-ES使用的当前版本（V2.2.0），启动的时候报错java.lang.UnsupportedClassVersionError: org/elasticsearch/bootstrap/Elasticsearch : Unsupported major.minor version 51.0，需要升级所在主机的JDK
-ES V2.2.0版的配置文
-      
-      </p>
-      
-      <p>
-          <a href="/2016/03/13/部署ELK遇到的若干问题备忘/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2015-12-05T09:11:18.000Z" itemprop="datePublished">
-          2015-12-05
-      </time>
-    
-    
-    | 
-    <a href='/tags/cx-Oracle/'>cx_Oracle</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2015/12/05/PIP安装cx-Oracle/">PIP安装cx-Oracle</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        PIP安装oracle遇到了两个问题，记录下解决步骤备忘。
-找不到Oracle安装路径报错distutils.errors.DistutilsSetupError: cannot locate an Oracle software installation
-解决方法如下：
-需要库文件instantclient-basic-linux-x86-64-11.2.0.2.0.zip，新版本到这里下载。
-需要头文件instantclient_1
-      
-      </p>
-      
-      <p>
-          <a href="/2015/12/05/PIP安装cx-Oracle/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2015-09-16T16:31:38.000Z" itemprop="datePublished">
-          2015-09-17
-      </time>
-    
-    
-    | 
-    <a href='/tags/golang/'>golang</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2015/09/17/使用golang发送邮件/">使用golang发送邮件</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        这两天项目中需要实现一个发送邮件的功能，这里记录下在实现过程中遇到的问题以及解决方法。
-
-问题1——证书由不知名机构签发报错x509: certificate signed by unknown authority，这是由于go实现的Client端默认是要对服务端传过来的数字证书进行校验，关闭即可。查看了SendMail的源码，其在建立连接的时候，需要传递一个配置对象，修改下配置，是客户端不对证书进行校验。
-123456if ok, _
-      
-      </p>
-      
-      <p>
-          <a href="/2015/09/17/使用golang发送邮件/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2015-07-03T09:28:33.000Z" itemprop="datePublished">
-          2015-07-03
-      </time>
-    
-    
-    | 
-    <a href='/tags/oracle/'>oracle</a>,
-    
-    <a href='/tags/sqlalchemy/'>sqlalchemy</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/">SQLAlchemy 查询 Oracle 中文乱码</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        flask 通过 flask_sqlalchemy 查询 oracle 返回结果显示乱码，
-解决方法：
-
-设置环境变量
-os.environ[&apos;NLS_LANG&apos;] = &apos;SIMPLIFIED CHINESE_CHINA.AL32UTF8&apos;
-  oralce 服务端编码可以通过select userenv(&#39;language&#39;) from dual;查询
+</div>
 
 
-一段完整代码
-#-*-
-      
-      </p>
-      
-      <p>
-          <a href="/2015/07/03/SQLAlchemy 查询 Oracle 中文乱码/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2015-04-02T15:09:54.000Z" itemprop="datePublished">
-          2015-04-02
-      </time>
-    
-    
-    | 
-    <a href='/tags/des/'>des</a>,
-    
-    <a href='/tags/3des/'>3des</a>,
-    
-    <a href='/tags/aes/'>aes</a>,
-    
-    <a href='/tags/xxtea/'>xxtea</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2015/04/02/加密性能测试/">加密性能测试</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        最近因为业务需要，对四种不同的加密方法（des、3des、aes和xxtea）做了性能测试（加解密吞吐量，加密前后文件变化大小）。
-结论
-加解密吞吐量：aes&gt;xxtea&gt;des&gt;3des。其中，aes的吞吐量高于其他算法1-2个数量级；xxtea的加密吞吐量远高于des，接近8倍，解密吞吐量接近
-文件大小加密前后转换率：四种方法加密后文件大小无差异；加密后文件大小与原文件大小差异可以忽略
-
-平均
-
-
-加密算法
-加密吞
-      
-      </p>
-      
-      <p>
-          <a href="/2015/04/02/加密性能测试/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2015-03-01T10:34:40.000Z" itemprop="datePublished">
-          2015-03-01
-      </time>
-    
-    
-    | 
-    <a href='/tags/IO/'>IO</a>,
-    
-    <a href='/tags/blocking/'>blocking</a>,
-    
-    <a href='/tags/nonblocking/'>nonblocking</a>,
-    
-    <a href='/tags/synchronous/'>synchronous</a>,
-    
-    <a href='/tags/asynchronous/'>asynchronous</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2015/03/01/（译）IO-揭秘/">（译）IO 揭秘</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        原文：I/O Demystified作者：Buddhika Chamith译者：being23
-
-随着高扩展服务器设计的过度宣传以及nodejs的流行，我打算对IO设计模式做一次针对性的阅读，因为时间原因，这个事情直到现在才得以进行。在做了一番研究之后，我想最好将这个过程中学到的知识记录下，对于我和看到这篇日志的人来说以后有一个参考。好了，让我们跳上I/O这辆巴士去兜兜风吧。
-I/O类型根据操作是否阻塞，IO就绪/完成事件通知是同步还是
-      
-      </p>
-      
-      <p>
-          <a href="/2015/03/01/（译）IO-揭秘/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2015-02-07T15:16:48.000Z" itemprop="datePublished">
-          2015-02-07
-      </time>
-    
-    
-    | 
-    <a href='/tags/ELK/'>ELK</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2015/02/07/使用ES实现异常日志实时分析/">使用ES实现异常日志实时分析</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        ES除了作为搜索引擎使用，还可以作为分析引擎使用。当前，统计系统无法满足对异常日志实时分析的需求，本文试图利用ES提供的分析功能，在几乎无需编写代码，仅仅稍作配置的情况下，实现异常实时分析。
-依旧使用的ELK组件，其中logstash负责读取异常日志；elasticsearch负责存储并索引日志；kibana负责展示分析结果。具体配置或使用见下文。
-logstash配置首先看下异常日志格式1f1#f2#f3#f4#f5#f6#f7#f8
-      
-      </p>
-      
-      <p>
-          <a href="/2015/02/07/使用ES实现异常日志实时分析/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <article class="post">
-    <header class="post-header">
-      <span class="post-meta">
-      <time datetime="2015-01-09T16:30:31.000Z" itemprop="datePublished">
-          2015-01-10
-      </time>
-    
-    
-    | 
-    <a href='/tags/logstash/'>logstash</a>,
-    
-    <a href='/tags/plugin/'>plugin</a>
-    
-    
-</span>
-      <h2 class="post-title"><a href="/2015/01/10/logstash插件开发/">logstash插件开发</a></h2>
-    </header>
-    <section class="post-excerpt">
-      <p>
-      
-        前一阵子，上线了logstash来监视各个业务系统的日志，效果还不错，日志中暴露的问题总能及时发出报警邮件。不过，有个问题——当杀死kettle中的job或者某个job运行出错需要stop时，短时间内会产生大量重复的错误日志，由于当前采取的策略是，只要发现错误立刻发邮件，所以导致邮箱瞬间爆满，然后logstash与邮件服务器之间的链接出现问题，进程退出。对此，考虑这么几个方案：
-
-对于像stop job时频繁产生的错误，直接忽略，不发送
-      
-      </p>
-      
-      <p>
-          <a href="/2015/01/10/logstash插件开发/" class="excerpt-link">Read More...</a>
-      </p>
-      
-    </section>
-  </article>
-  
-  <nav class="pagination" role="pagination">
-    
-    <span class="page-number">Page 1 of 3</span>
-    <a class="older-posts" href="/page/2/">Older Posts →</a>
-  </nav>
-</main>
-
-
-  
-<footer class="site-footer">
-  
-  <div class="inner">
-     <section class="copyright">All content copyright <a href="/">being23</a> &copy; 2014 &bull; All rights reserved.</section>
-     <section class="poweredby">Proudly published with <a class="icon-ghost" href="http://zespia.tw/hexo/">Hexo</a></section>
-  </div>
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
 </footer>
 
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-
-<script type="text/javascript" src="/js/jquery.fitvids.js"></script>
-<script type="text/javascript" src="/js/index.js"></script>
-
-
-
-
-
-
+    </div>
 </body>
+
 </html>

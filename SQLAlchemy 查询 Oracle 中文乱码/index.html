@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>SQLAlchemy 查询 Oracle 中文乱码 | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">SQLAlchemy 查询 Oracle 中文乱码</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">July 3, 2015&nbsp;&nbsp;17:28:33</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>flask 通过 flask_sqlalchemy 查询 oracle 返回结果显示乱码，</p>
+<p>解决方法：</p>
+<ul>
+<li><p>设置环境变量</p>
+<pre><code>  os.environ[&#39;NLS_LANG&#39;] = &#39;SIMPLIFIED CHINESE_CHINA.AL32UTF8&#39;
+</code></pre>
+<p>  oralce 服务端编码可以通过<code>select userenv(&#39;language&#39;) from dual;</code>查询</p>
+</li>
+</ul>
+<p>一段完整代码</p>
+<pre><code>#-*-coding:utf-8-*-
+
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+import os
+
+os.environ[&#39;NLS_LANG&#39;] = &#39;SIMPLIFIED CHINESE_CHINA.AL32UTF8&#39;
+app = Flask(__name__)
+#app.config[&#39;SQLALCHEMY_DATABASE_URI&#39;] = &#39;mysql://username:passwd@host/db?charset=utf8&#39;
+app.config[&#39;SQLALCHEMY_DATABASE_URI&#39;] = &quot;oracle://username:passwd@host:port/statistics&quot;
+app.config[&#39;SQLALCHEMY_ECHO&#39;] = True
+app.config[&#39;SQLALCHEMY_RECORD_QUERIES&#39;] = True
+DEBUG = True
+
+db = SQLAlchemy(app)
+
+if __name__ == &#39;__main__&#39;:
+    sql = &#39;select col1, col2 from tbl where rownum &lt;= 1&#39;
+    for item in db.engine.execute(sql):
+        print item
+        for col in item:
+            print col
+</code></pre>
+<p>相关资料</p>
+<ol>
+<li><a target="_blank" rel="noopener" href="http://firefish.blog.51cto.com/298258/112794">sqlalchemy中文问题解决方案</a></li>
+<li><a target="_blank" rel="noopener" href="http://heipark.iteye.com/blog/1765915">python oracle查询中文乱码（问号）问题</a></li>
+<li><a target="_blank" rel="noopener" href="http://dw008.blog.51cto.com/2050259/934741">PL&#x2F;SQL Developer 显示中文乱码问题</a></li>
+</ol>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>smilenceee</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="http://yoursite.com/SQLAlchemy%20%E6%9F%A5%E8%AF%A2%20Oracle%20%E4%B8%AD%E6%96%87%E4%B9%B1%E7%A0%81/">http://yoursite.com/SQLAlchemy%20%E6%9F%A5%E8%AF%A2%20Oracle%20%E4%B8%AD%E6%96%87%E4%B9%B1%E7%A0%81/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/oracle/"># oracle</a>
+                    
+                        <a href="/tags/sqlalchemy/"># sqlalchemy</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/%E4%BD%BF%E7%94%A8golang%E5%8F%91%E9%80%81%E9%82%AE%E4%BB%B6/">使用golang发送邮件</a>
+            
+            
+            <a class="next" rel="next" href="/%E5%8A%A0%E5%AF%86%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95/">加密性能测试</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

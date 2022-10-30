@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>Golang Channels | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    var tocbot_timer;
+    var DEPTH_MAX = 6; // 为 6 时展开所有
+    var tocbot_default_config = {
+        tocSelector: '.tocbot-list',
+        contentSelector: '.post-content',
+        headingSelector: 'h1, h2, h3, h4, h5',
+        orderedList: false,
+        scrollSmooth: true,
+        onClick: extend_click,
+    };
+
+    function extend_click() {
+        clearTimeout(tocbot_timer);
+        tocbot_timer = setTimeout(function() {
+            tocbot.refresh(obj_merge(tocbot_default_config, {
+                hasInnerContainers: true
+            }));
+        }, 420); // 这个值是由 tocbot 源码里定义的 scrollSmoothDuration 得来的
+    }
+
+    document.ready(function() {
+        tocbot.init(obj_merge(tocbot_default_config, {
+            collapseDepth: 1
+        }));
+    });
+
+    function expand_toc() {
+        var b = document.querySelector('.tocbot-toc-expand');
+        var expanded = b.getAttribute('data-expanded');
+        expanded ? b.removeAttribute('data-expanded') : b.setAttribute('data-expanded', true);
+        tocbot.refresh(obj_merge(tocbot_default_config, {
+            collapseDepth: expanded ? 1 : DEPTH_MAX
+        }));
+        b.innerText = expanded ? 'Expand all' : 'Collapse all';
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function obj_merge(target, source) {
+        for (var item in source) {
+            if (source.hasOwnProperty(item)) {
+                target[item] = source[item];
+            }
+        }
+        return target;
+    }
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">Golang Channels</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">January 14, 2017&nbsp;&nbsp;20:51:18</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>原文见<a target="_blank" rel="noopener" href="http://www.tapirgames.com/blog/golang-channel">Channels in Golang</a></p>
+<p>Channels是Golang的重要特性，也是Golang独树一帜的特征之一。Channels使得并发编程更容易（至少看起来），灵活以及有趣。</p>
+<p>本文给出channel相关的概念，语法和规则。</p>
+<h2 id="概念与语法"><a href="#概念与语法" class="headerlink" title="概念与语法"></a>概念与语法</h2><h3 id="Channel介绍"><a href="#Channel介绍" class="headerlink" title="Channel介绍"></a>Channel介绍</h3><p>Channel可以看作是程序内部的FIFO消息队列。使用Channel的目的是传输值，具体是指，在不同的goroutines之间传递值的所属。良好设计的代码应该保证在任何时刻任何值只属于最多一个goroutine。正确地使用channels，可以避免goroutine之间的数据竞争。</p>
+<h3 id="Channel-类型和取值"><a href="#Channel-类型和取值" class="headerlink" title="Channel 类型和取值"></a>Channel 类型和取值</h3><p>Channel是组合类型。类似数组，切片和map，channel的具体类型由元素类型决定。所有要发送到channel的数据类型必须与元素类型一致。例如，如果元素类型是<code>string</code>，那么channel的类型就是<code>chan string</code>。</p>
+<p>Channel是有方向的。假设有类型<code>T</code>，那么<code>chan T</code>就是双向channel类型。对于双向channel，编译器允许从中收发数据。<code>chan&lt;- T</code>是单向发送channel类型。编译器不允许从中接收数据。<code>&lt;-chan T</code>是单向接收channel类型。编译器不允许向其发送数据。</p>
+<p>双向channel类型<code>chan T</code>的值可以赋给单向发送类型<code>chan&lt;- T</code>的变量，也可以赋给单向接收类型<code>&lt;-chan T</code>的变量。</p>
+<p>Channel类型的零值由<code>nil</code>表示。非零channel必须由内置函数<code>make</code>创建。例如，<code>make(chan int, 10)</code>将会创建元素类型是<code>int</code>的channel。函数<code>make</code>的第二个参数表示新建channel的缓冲区大小（见下节）。该参数可选，默认值0。</p>
+<p>Channel缓冲区大小经常称为channel的容量。零容量的channel称为阻塞channel，非零容量的channel称为缓冲channel。</p>
+<h3 id="Channel内部结构"><a href="#Channel内部结构" class="headerlink" title="Channel内部结构"></a>Channel内部结构</h3><p>每个channel维护3个队列：</p>
+<ul>
+<li>接收goroutine队列。该队列是一个大小无限制的链表。这个队列中的goroutines称为channel的阻塞接收goroutines。</li>
+<li>发送goroutine队列。该队列也是一个大小无限制的链表。这个队列中的goroutine称为channel的阻塞发送goroutines。</li>
+<li>值缓冲队列。这是一个循环队列。队列大小在channel创建时指定。如果当前队列中值的数目达到了容量上限，那么channel处于满状态。如果当前队列中没有值，那么channel处于空状态。对于零容量channel，既处于满状态，也处于空状态。</li>
+</ul>
+<p>如果发送goroutine队列或者接收goroutine队列不为空，那么channel不会回收。</p>
+<h3 id="Channel操作"><a href="#Channel操作" class="headerlink" title="Channel操作"></a>Channel操作</h3><p>Channel（假设是<code>ch</code>）可以执行下面的操作：</p>
+<ul>
+<li>调用内置函数<code>cap(ch)</code>获取值缓冲队列容量。</li>
+<li>调用内置函数<code>len(ch)</code>获取值缓冲队列大小。这个函数没有看起来那么有用，实践中很少使用。</li>
+<li>调用内置函数<code>close(ch)</code>关闭channel。非零channel只能关闭一次。在运行时关闭已经关闭的或者<code>nil</code>channel出现panic。请注意，在Golang中关闭单向接收channel是非法的，无法编译。</li>
+<li>通过这种形式<code>ch &lt;- v</code>发送值<code>v</code>。取决于channel的状态，发送操作的结果可能是成功发送值到channel，阻塞发送goroutine，或者发送goroutine出现panic（见下文channel规则）。</li>
+<li>通过这种形式<code>v, ok = &lt;- ch</code>接收（获取）值，其中第二个值<code>ok</code>是可选的，用于表明值<code>v</code>是否是channel关闭之前发送的。取决于channel的状态，接收结果可能是成功从channel中接收值，或者阻塞接收goroutine。接收操作永远不会导致接收goroutine出现panic（细节见下文channel规则）。</li>
+</ul>
+<p>所有这些操作都是同步的，无需额外的同步措施。然而，跟Golang中的多数操作一样，channel赋值不是同步的。</p>
+<h3 id="For-Range作用于Channels"><a href="#For-Range作用于Channels" class="headerlink" title="For-Range作用于Channels"></a>For-Range作用于Channels</h3><p>语法<code>for range</code>可用于channels。该循环会尝试迭代获取发送到channel的所有值，直到channel关闭或者内部值缓冲队列为空。与作用于数组、切片和map上<code>for range</code>语法不同的是，作用于channels上时，每次迭代最多返回一个值。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> v = <span class="keyword">range</span> aChannel &#123;</span><br><span class="line">	<span class="comment">// use v</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>等价于</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">for &#123;</span><br><span class="line">	v, ok = &lt;-aChannel</span><br><span class="line">	if !ok &#123;</span><br><span class="line">		break</span><br><span class="line">	&#125;</span><br><span class="line">	// use v</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Select-Cases作用于Channels"><a href="#Select-Cases作用于Channels" class="headerlink" title="Select-Cases作用于Channels"></a>Select-Cases作用于Channels</h3><p>Golang中的<code>select</code>块语法是特别为channels设计的。该语法非常像<code>switch</code>块语法，例如，在<code>select</code>块中，可以有多个<code>case</code>分支以及至多一个<code>default</code>分支。不过它们之间也有一些明显的区别：</p>
+<ul>
+<li><code>select</code>关键字后面（<code>&#123;</code>前面）不允许有语句以及表达式。</li>
+<li><code>case</code>分支中不允许使用<code>fallthrough</code>语句。</li>
+<li><code>select</code>块中的关键字<code>case</code>后面的每一个语句必须是接收操作或者发送操作。</li>
+<li>在<code>select</code>块中关键字<code>case</code>后面的所有的channel操作阻塞当前goroutine时，如果存在<code>default</code>分支，那么执行<code>default</code>分支，否则阻塞当前goroutine，并将其放到关键字<code>case</code>后面操作channel的相应发送goroutine队列或者接收goroutine队列。<br>所以，一个goroutine可以同时位于多个channel的发送goroutine队列和接收goroutine队列。甚至是同一个channel的发送goroutine队列和接收goroutine队列。<br>当goroutine从<code>select</code>块阻塞变成非阻塞时，就会从关键字<code>case</code>后面的所有参与操作channel的发送goroutine队列和接收goroutine队列中移除。</li>
+</ul>
+<h3 id="Channel规则完整列表"><a href="#Channel规则完整列表" class="headerlink" title="Channel规则完整列表"></a>Channel规则完整列表</h3><h4 id="nilChannel规则"><a href="#nilChannel规则" class="headerlink" title="nilChannel规则"></a><code>nil</code>Channel规则</h4><ul>
+<li><strong>close</strong> <code>nil</code>channel，当前goroutine panic。</li>
+<li><strong>send</strong> 值到<code>nil</code>channel，永久阻塞当前goroutine。</li>
+<li>从<code>nil</code>channel <strong>receive</strong>，永久阻塞当前goroutine。</li>
+</ul>
+<p>（<code>nil</code> channel上调用内置函数<code>len</code>、<code>cap</code>总是返回0。）</p>
+<h4 id="已关闭的Channel规则"><a href="#已关闭的Channel规则" class="headerlink" title="已关闭的Channel规则"></a>已关闭的Channel规则</h4><ul>
+<li><strong>close</strong> 已关闭的channel，当前goroutine panic。</li>
+<li><strong>send</strong> 值到已关闭的channel，当前goroutine panic。请注意，发送值到已关闭channel是非阻塞操作。</li>
+<li>从已关闭channel <strong>receive</strong>，当前goroutine不会panic也不会阻塞，总是可以成功接收到值。可选的第二个bool类型的返回值表明接收到的值是否在channel关闭之前发送。如果不是channel关闭之前发送的，那么接收值必须是零值。可以从任何关闭的channel获取人任意多的零值。</li>
+</ul>
+<h4 id="非nil，非关闭Channel规则"><a href="#非nil，非关闭Channel规则" class="headerlink" title="非nil，非关闭Channel规则"></a>非<code>nil</code>，非关闭Channel规则</h4><p>接下来，非<code>nil</code>非关闭的channels称为<em>活跃</em>channels。</p>
+<ul>
+<li><p><strong>close</strong>活跃channel</p>
+<ul>
+<li>首先从channel的接收goroutine队列移除所有的goroutine，让它们不再阻塞。这些goroutine中的每一个都会接收一个元素类型的零值。然后</li>
+<li>移除发送goroutine队列中的所有的goroutines，并使得其中每个goroutine panic。<br>已关闭channel的值缓冲队列可能是非空的。</li>
+</ul>
+</li>
+<li><p><strong>send</strong>值到活跃channel</p>
+<ol>
+<li>如果接收goroutine队列非空，不再阻塞队列中的第一个goroutine，把值传给该goroutine。<br>  这种情形下，值缓冲队列必须为空。<br>  当前goroutine不会阻塞。<br>  非阻塞的接收goroutine会从接收goroutine队列中移除。<br>  如果这个非阻塞的goroutine之前阻塞在<code>select</code> <code>case</code>分支，那么该goroutine将会从<code>case</code>操作相关channel的所有相应接收goroutine队列和发送goroutine队列中移除。</li>
+<li>如果channel的值缓冲队列没有满（not full），将值发送到发送缓冲队列。<br>  当前goroutine不阻塞。</li>
+<li>将当前goroutine放到channel的发送goroutine队列，阻塞当前goroutine。在这种情形下，接收goroutine队列必须为空，值缓冲队列必须处于满状态。</li>
+</ol>
+<p>  （上述三种场景有序，首先执行满足条件的。）</p>
+</li>
+<li><p>从活跃channel <strong>receive</strong></p>
+<ol>
+<li><pre><code>如果值缓冲队列非空，从中获取第一个值。
+</code></pre>
+  不阻塞当前goroutine。<br>  如果发送goroutine队列非空，不再阻塞队列中的第一个goroutine，将其要发送的值会放到值缓冲区。然后从发送goroutine队列移除。<br>  如果这个非阻塞的goroutine之前阻塞在<code>select</code> <code>case</code>分支，那么该goroutine将会从<code>case</code>操作相关channel的所有相应接收goroutine队列和发送goroutine队列中移除。</li>
+<li>如果发送goroutine队列不为空（不过值缓冲队列是空的），队列中的第一个goroutine不再阻塞。非阻塞goroutine要发送的值会传给当前接收goroutine。<br> 不阻塞当前goroutine。<br> 如果这个非阻塞goroutine之前阻塞在<code>select</code> <code>case</code>分支，那么该goroutine将会从<code>case</code>操作相关channel的所有相应接收goroutine队列和发送goroutine队列中移除。</li>
+<li>阻塞当前goroutine，将当前其放到接收goroutine队列。对于这种场景，发送goroutine队列和值缓冲队列必须都为空。</li>
+</ol>
+<p>  （上述三种场景有序，首先执行满足条件的。）</p>
+</li>
+</ul>
+<h3 id="关于Channels的一些真相"><a href="#关于Channels的一些真相" class="headerlink" title="关于Channels的一些真相"></a>关于Channels的一些真相</h3><p>根据上面列出来的一些规则，channel内部队列的一些真相如下：</p>
+<ul>
+<li>任何时候，发送goroutine队列和接收goroutine队列必须有一个是空的。</li>
+<li>任何时候，值缓冲队列和接收goroutine队列必须有一个是空的。</li>
+<li>任何时候，如果值缓冲队列不满(not full)，那么发送goroutine队列必须是空的。</li>
+<li>任何时候，如果值缓冲队列非空(not empty)，那么接收goroutine队列必须是空的。</li>
+<li>如果channel是关闭的，发送goroutine队列和接收goroutine队列必须为空，但是值缓冲队列可以不为空。</li>
+</ul>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>smilenceee</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="http://yoursite.com/Golang%20Channels/">http://yoursite.com/Golang%20Channels/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/channel/"># channel</a>
+                    
+                        <a href="/tags/golang/"># golang</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+            
+            <a class="next" rel="next" href="/2016%E6%80%BB%E7%BB%93/">2016总结</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

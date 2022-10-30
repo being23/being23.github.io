@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>STATEMENT对象优化 | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    var tocbot_timer;
+    var DEPTH_MAX = 6; // 为 6 时展开所有
+    var tocbot_default_config = {
+        tocSelector: '.tocbot-list',
+        contentSelector: '.post-content',
+        headingSelector: 'h1, h2, h3, h4, h5',
+        orderedList: false,
+        scrollSmooth: true,
+        onClick: extend_click,
+    };
+
+    function extend_click() {
+        clearTimeout(tocbot_timer);
+        tocbot_timer = setTimeout(function() {
+            tocbot.refresh(obj_merge(tocbot_default_config, {
+                hasInnerContainers: true
+            }));
+        }, 420); // 这个值是由 tocbot 源码里定义的 scrollSmoothDuration 得来的
+    }
+
+    document.ready(function() {
+        tocbot.init(obj_merge(tocbot_default_config, {
+            collapseDepth: 1
+        }));
+    });
+
+    function expand_toc() {
+        var b = document.querySelector('.tocbot-toc-expand');
+        var expanded = b.getAttribute('data-expanded');
+        expanded ? b.removeAttribute('data-expanded') : b.setAttribute('data-expanded', true);
+        tocbot.refresh(obj_merge(tocbot_default_config, {
+            collapseDepth: expanded ? 1 : DEPTH_MAX
+        }));
+        b.innerText = expanded ? 'Expand all' : 'Collapse all';
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function obj_merge(target, source) {
+        for (var item in source) {
+            if (source.hasOwnProperty(item)) {
+                target[item] = source[item];
+            }
+        }
+        return target;
+    }
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">STATEMENT对象优化</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">February 6, 2013&nbsp;&nbsp;21:59:57</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h2 id="重用statement对象"><a href="#重用statement对象" class="headerlink" title="重用statement对象"></a>重用<code>statement</code>对象</h2><p>每次创建<code>statement</code>对象时，需要在客户端和服务端分配资源，如内存和游标(cursor)，用于存储对象及数据。为了不必要的内存重分配，应重用<code>statement</code>对象。<code>statement</code>对象创建后，可以使用<code>setSQL</code>方法进行重用，例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Connection* conn = env-&gt;createConnection(); </span><br><span class="line">Statement* stmt = conn-&gt;createStatement(); </span><br><span class="line">stmt-&gt;setSQL(“INSERT INTO fruit_basket_tab VALUES(‘Apples’, 3)”); </span><br><span class="line">stmt-&gt;executeUpdate(); </span><br><span class="line">stmt-&gt;setSQL(“INSERT INTO fruit_basket_tab VALUES(‘Oranges’, 4)”); </span><br><span class="line">stmt-&gt;executeUpdate(); </span><br><span class="line">stmt-&gt;setSQL(“INSERT INTO fruit_basket_tab VALUES(‘Bananas’, 1)”); </span><br><span class="line">stmt-&gt;executeUpdate();&#x27; </span><br><span class="line">stmt-&gt;setSQL(“SELECT * FROM fruit_basket_tab WHERE quantity &gt; 2”); </span><br><span class="line">ResultSet* rs = stmt-&gt;executeQuery();</span><br></pre></td></tr></table></figure>
+
+<h2 id="statement参数化"><a href="#statement参数化" class="headerlink" title="statement参数化"></a><code>statement</code>参数化</h2><p>为了进一步控制内存重新分配，可以通过参数化将前面3条SQL语句变成1条，然后设置参数，再执行。注意输入参数的类型变化，因为，每次改变参数类型都会触发重绑定。参数化示例如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">stmt-&gt;setSQL(“INSERT INTO fruit_basket_tab VALUES(:1, :2)”); </span><br><span class="line">stmt-&gt;setString( 1, “Apples” ); </span><br><span class="line">stmt-&gt;setInt( 2, 3 ); </span><br><span class="line">stmt-&gt;executeUpdate(); </span><br><span class="line">stmt-&gt;setString( 1, “Oranges” ); </span><br><span class="line">stmt-&gt;setInt( 2, 4 ); </span><br><span class="line">stmt-&gt;executeUpdate(); </span><br><span class="line">stmt-&gt;setString( 1, “Bananas” ); </span><br><span class="line">stmt-&gt;setInt( 2, 1 ); </span><br><span class="line">stmt-&gt;executeUpdate(); </span><br></pre></td></tr></table></figure>
+
+<h2 id="批量更新"><a href="#批量更新" class="headerlink" title="批量更新"></a>批量更新</h2><p>对于那些经常发生的操作，很多时间都浪费在与服务器网络通信中。OCCI提供了有效的机制用于在单次网络通信中发送多行信息。该优化可用于<code>INSERTs</code>,<code>UPDATEs</code>和<code>DELETEs</code>。首先，设置最大迭代次数，然后设置可变长度参数的最大长度。在迭代过程中参数类型不可变。具体细节参考OCCI Programmers Guide，第二章。下例是上面的<code>INSERTs</code>的优化：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">//prepare the batching process </span><br><span class="line">stmt-&gt;setMaxIterations( 3 ); </span><br><span class="line">stmt-&gt;setMaxParamSize( 1, 8 ); //”Bananas” is longest param </span><br><span class="line">//batch the statements </span><br><span class="line">stmt-&gt;setSQL(“INSERT INTO fruit_basket_tab VALUES(:1, :2)”); </span><br><span class="line">stmt-&gt;setString( 1, “Apples” ); </span><br><span class="line">stmt-&gt;setInt( 2, 3 ); </span><br><span class="line">stmt-&gt;addIteration(); </span><br><span class="line">stmt-&gt;setString( 1, “Oranges” ); </span><br><span class="line">stmt-&gt;setInt( 2, 4 ); </span><br><span class="line">stmt-&gt;addIteration(); </span><br><span class="line">stmt-&gt;setString( 1, “Bananas” ); </span><br><span class="line">stmt-&gt;setInt( 2, 1 ); </span><br><span class="line">//execute the statements </span><br><span class="line">stmt-&gt;executeUpdate(); </span><br></pre></td></tr></table></figure>
+
+<h2 id="Statement-setDataBuffer方法"><a href="#Statement-setDataBuffer方法" class="headerlink" title="Statement::setDataBuffer方法"></a><code>Statement::setDataBuffer</code>方法</h2><p>绑定值到参数化statements的参数时需要内存拷贝，因为为了避免信息在中间执行过程中被覆盖，所以必须拷贝到内部的缓冲区中。拷贝的代价对于大字符串尤其明显，内存的消耗以及拷贝所花的时间。如果应用可以自己管理内存，就可以通过OCCI提供的方法最小化上述开销。</p>
+<p>虽然许多OCI开发者使用OCCI简明的创建<code>environments</code>和<code>statement</code>对象，但仍然使用许多OCI中的类型。<code>setDataBuffer</code>方法允许OCI开发者执行数组更新，最小化网络通信次数。<code>setDataBuffer</code>方法与<code>setXXX</code>方法工作方法不同。一般说来，<code>setXXX</code>方法会将传过来的数据拷贝到内部缓冲区中，只要<code>setXXX</code>返回后参数值就可以被改变。然而，使用<code>setDataBuffer</code>方法可以避免将数据拷贝到内部缓冲区中。代价是应用程序在执行完statement之前不可以修改缓冲区。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">// insert Bananas </span><br><span class="line">char buf[BUF_SIZE] = &quot;Bananas&quot;; </span><br><span class="line">int quantity = 1; </span><br><span class="line">ub2 buflen = strlen( buf ) + 1; </span><br><span class="line">ub2 quantlen = sizeof(int); </span><br><span class="line">stmt-&gt;setDataBuffer(1, (dvoid*)buf, OCCI_SQLT_STR, buflen, &amp;buflen); </span><br><span class="line">stmt-&gt;setDataBuffer(2, (dvoid*)&amp;quantity, OCCIINT, quantlen, </span><br><span class="line">&amp;quantlen); </span><br><span class="line">stmt-&gt;executeUpdate(); // executeArrayUpdate(1) also would work. </span><br><span class="line">// insert Apples </span><br><span class="line">strcpy( buf, “Apples” ); </span><br><span class="line">quantity = 3; </span><br><span class="line">buflen = strlen( buf ) + 1; </span><br><span class="line">quantlen = sizeof( int ); </span><br><span class="line">stmt-&gt;setDataBuffer(1, (dvoid*)buf, OCCI_SQLT_STR, buflen, &amp;buflen); </span><br><span class="line">stmt-&gt;setDataBuffer(2, (dvoid*)&amp;quantity, OCCIINT, quantlen, </span><br><span class="line">&amp;quantlen); </span><br><span class="line">stmt-&gt;executeUpdate(); // executeArrayUpdate(1) also would work. </span><br><span class="line">//commit the transaction </span><br><span class="line">conn-&gt;commit();</span><br></pre></td></tr></table></figure>
+
+<p><code>setDataBuffer</code>方法可以与迭代执行(iterative executes)和<code>executeArrayUpdate</code>方法结合使用。</p>
+<h2 id="executeArrayUpdate方法"><a href="#executeArrayUpdate方法" class="headerlink" title="executeArrayUpdate方法"></a><code>executeArrayUpdate</code>方法</h2><p>当进行大量<code>INSERTs</code>和<code>UPDATEs</code>操作时，可以通过<code>executeArrayUpdate</code>方法和<code>setDataBuffer</code>方法批量处理。这可以节省网络通信，提高吞吐量。示例如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">char fruit[][BUF_SIZE] = &#123; &quot;Apples&quot;,&quot;Oranges&quot;,&quot;Bananas&quot;,&quot;Grapes&quot; &#125;; </span><br><span class="line">int int_arr[]=&#123; 3,4,1,5 &#125;; </span><br><span class="line">ub2 fruitlen[4]; // array of size of individual elements </span><br><span class="line">ub2 intsize[4]; </span><br><span class="line">for(int i=0 ; i&lt;4 ; i++) </span><br><span class="line">&#123; </span><br><span class="line">intsize[i] = sizeof(int); </span><br><span class="line">fruitlen[i] = strlen( fruit[i] ) + 1 ; // include the null </span><br><span class="line">&#125; </span><br><span class="line">stmt-&gt;setDataBuffer(1, (dvoid*)fruit, OCCI_SQLT_STR, BUF_SIZE, </span><br><span class="line">fruitlen); </span><br><span class="line">stmt-&gt;setDataBuffer(2, (dvoid*)int_arr, OCCIINT, sizeof(int), intsize); </span><br><span class="line">stmt-&gt;executeArrayUpdate(4); </span><br><span class="line">conn-&gt;commit(); </span><br></pre></td></tr></table></figure>
+
+<p><code>executeArrayUpdate</code>方法不会执行，直到所有缓冲区均通过<code>setDataBuffer</code>方法设置。如果有参数需要调用<code>setXXX</code>方法赋值，可以调用<code>setMaxIterations</code>和<code>setMaxParamSize</code>方法，以及<code>addIteration</code>方法。具体如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">char fruits[][BUF_SIZE] = &#123;“Apples”, “Oranges”, “Bananas”&#125;; </span><br><span class="line">ub2 fruitLen[3]; </span><br><span class="line">for( int j=0; j&lt;3; j++ ) </span><br><span class="line">&#123; </span><br><span class="line">fruitLen[j] = strlen( fruits[j] ) + 1; //include the null </span><br><span class="line">&#125; </span><br><span class="line">stmt-&gt;setMaxIterations(3); </span><br><span class="line">//setDataBuffer only needs to be executed once </span><br><span class="line">//while all the other variables need to be set for each iteration </span><br><span class="line">stmt-&gt;setDataBuffer( 1, fruits, OCCI_SQLT_STR, sizeof(fruits[0]), </span><br><span class="line">fruitLen ); </span><br><span class="line">stmt-&gt;setInt(2, 3); //Apple’s quantity </span><br><span class="line">stmt-&gt;addIteration(); </span><br><span class="line">stmt-&gt;setInt(2, 4); //Orange’s quantity </span><br><span class="line">stmt-&gt;addIteration(); </span><br><span class="line">stmt-&gt;setInt(2, 1); //Banana’s quantity </span><br><span class="line">//execute the iterative update </span><br><span class="line">stmt-&gt;executeUpdate(3);</span><br></pre></td></tr></table></figure>
+
+<h2 id="使用合适的Accessors和字符集"><a href="#使用合适的Accessors和字符集" class="headerlink" title="使用合适的Accessors和字符集"></a>使用合适的Accessors和字符集</h2><p>对操作的列使用合适的<code>setXXX</code>和<code>getXXX</code>方法，而非统一作为string处理，可以省去不必要的转换。<br>在<code>NLS_LANG</code>环境设置中使用合适的字符集，以避免获取字符串时不必要的字符集转换。</p>
+<h2 id="自动提交模式"><a href="#自动提交模式" class="headerlink" title="自动提交模式"></a>自动提交模式</h2><p>由于所有的SQL DML都是在事务中执行，所以需要确认所有的DML。可以根据具体情况使用“<code>Connection::commit</code>”和“<code>Connection::rollback</code>”方法。“<code>Statement::setAutoCommit</code>”方法可以用来确认其后的每条语句。使用该方法可节省网络传输时间。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">//code with AutoCommit </span><br><span class="line">//transaction 1 </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Apples”,3)); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Oranges”,4)); </span><br><span class="line">stmt-&gt;setAutoCommit( TRUE ); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Bananas”,1)); </span><br><span class="line">stmt-&gt;setAutoCommit( FALSE ); </span><br><span class="line">//transaction 2 </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Apples”,5)); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Oranges”,6)); </span><br><span class="line">stmt-&gt;setAutoCommit( TRUE ); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Bananas”,2)); </span><br><span class="line">stmt-&gt;setAutoCommit( FALSE ); </span><br></pre></td></tr></table></figure>
+
+<p>这与下面的语句是等价的，但是2次网络传输，每个事务1次</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">//code without AutoCommit </span><br><span class="line">//transaction 1 </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Apples”,3)); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Oranges”,4)); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Bananas”,1)); </span><br><span class="line">conn-&gt;commit(); </span><br><span class="line">//transaction 2 </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Apples”,5)); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Oranges”,6)); </span><br><span class="line">stmt-&gt;executeUpdate(“INSERT INTO fruit_basket_tab VALUES(“Bananas”,2)); </span><br><span class="line">conn-&gt;commit(); </span><br></pre></td></tr></table></figure>
+
+<p>建议<code>AutoCommit</code>只在每个事务的最后一条SQL语句前面使用。</p>
+<h2 id="结果集对象的优化"><a href="#结果集对象的优化" class="headerlink" title="结果集对象的优化"></a>结果集对象的优化</h2><p>结果集作为请求的响应返回。可以使用<code>next</code>和<code>status</code>方法处理结果集：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ResultSet* rs = stmt-&gt;executeQuery( “SELECT * FROM fruit_basket_tab” ); </span><br><span class="line">ResultSet::Status stat = rs-&gt;status(); //status is DATA_AVAILABLE </span><br><span class="line">while( rs-&gt;next() ) &#123; //process data &#125; </span><br></pre></td></tr></table></figure>
+
+<h2 id="setPrefetchRowCount-and-setPrefetchMemorySize"><a href="#setPrefetchRowCount-and-setPrefetchMemorySize" class="headerlink" title="setPrefetchRowCount and setPrefetchMemorySize"></a><code>setPrefetchRowCount</code> and <code>setPrefetchMemorySize</code></h2><p>虽然<code>rs-&gt;next()</code>每次只能返回一行，但是可以在一次网络中预取多行放到客户端的缓存中。使用类<code>Statement</code>的<code>setPrefetchRowCount</code>方法和<code>setPrefetchMemorySize</code>方法，每次可以取得不止一行。上例优化后如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">stmt-&gt;setPrefetchRowCount( 3 ); </span><br><span class="line">ResultSet* rs = stmt-&gt;executeQuery( “SELECT * FROM fruit_basket_tab” ); </span><br><span class="line">while ( rs-&gt;next() ) &#123; //process data &#125; </span><br></pre></td></tr></table></figure>
+
+<p>使用上述代码，在一次网络通信中就能取得3条记录。默认情形中，预取功能是启用的，每次多取一条。要想关闭预取功能，必须同时调用方法<code>setPrefetchRowCount</code>和<code>setPrefetchMemorySize</code>，参数为0。如果两个<code>setPrefetchXXX</code>方法都被调用了，那么实际预取的数目是这两个方法参数中较小的那个。</p>
+<h2 id="setMaxColumnSize"><a href="#setMaxColumnSize" class="headerlink" title="setMaxColumnSize"></a><code>setMaxColumnSize</code></h2><p>当取得的结果中有些列较大时，可以使用<code>ResultSet::setMaxColumnSize</code>方法限制从指定的列可以获取多少数据。当只对部分数据感兴趣或者缓存大小有限时，这就有用了。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ResultSet *rs = stmt-&gt;executeQuery( “SELECT description FROM </span><br><span class="line">fruit_basket_tab” ); </span><br><span class="line">//want only first 80 characters from the description column </span><br><span class="line">rs-&gt;setMaxColumnSize( 1, 80 );</span><br></pre></td></tr></table></figure>
+<h2 id="关闭结果集"><a href="#关闭结果集" class="headerlink" title="关闭结果集"></a>关闭结果集</h2><p>当对结果集的处理结束后，调用<code>Statement::closeResultSet</code>方法手动强制关闭，这样数据库和OCCI的使用的资源就不必等待自动释放。</p>
+<h2 id="终止Statement"><a href="#终止Statement" class="headerlink" title="终止Statement"></a>终止<code>Statement</code></h2><p>最后，为了确保没有内存泄漏，并关闭相关的服务器端的游标，需要释放所有的<code>statement</code>对象。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">conn-&gt;terminateStatement( stmt );</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li>Using OCCI: Best Practices</li>
+<li><a target="_blank" rel="noopener" href="http://www.stanford.edu/dept/itss/docs/oracle/10gR2/appdev.102/b14294/performance.htm">http://www.stanford.edu/dept/itss/docs/oracle/10gR2/appdev.102/b14294/performance.htm</a></li>
+</ul>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>smilenceee</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="http://yoursite.com/STATEMENT%E5%AF%B9%E8%B1%A1%E4%BC%98%E5%8C%96/">http://yoursite.com/STATEMENT%E5%AF%B9%E8%B1%A1%E4%BC%98%E5%8C%96/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/oracle/"># oracle</a>
+                    
+                        <a href="/tags/statement/"># statement</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/%EF%BC%88%E8%AF%91%EF%BC%89Go%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86/">（译）Go错误处理</a>
+            
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

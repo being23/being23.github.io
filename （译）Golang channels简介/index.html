@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>（译）Golang channels简介 | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    var tocbot_timer;
+    var DEPTH_MAX = 6; // 为 6 时展开所有
+    var tocbot_default_config = {
+        tocSelector: '.tocbot-list',
+        contentSelector: '.post-content',
+        headingSelector: 'h1, h2, h3, h4, h5',
+        orderedList: false,
+        scrollSmooth: true,
+        onClick: extend_click,
+    };
+
+    function extend_click() {
+        clearTimeout(tocbot_timer);
+        tocbot_timer = setTimeout(function() {
+            tocbot.refresh(obj_merge(tocbot_default_config, {
+                hasInnerContainers: true
+            }));
+        }, 420); // 这个值是由 tocbot 源码里定义的 scrollSmoothDuration 得来的
+    }
+
+    document.ready(function() {
+        tocbot.init(obj_merge(tocbot_default_config, {
+            collapseDepth: 1
+        }));
+    });
+
+    function expand_toc() {
+        var b = document.querySelector('.tocbot-toc-expand');
+        var expanded = b.getAttribute('data-expanded');
+        expanded ? b.removeAttribute('data-expanded') : b.setAttribute('data-expanded', true);
+        tocbot.refresh(obj_merge(tocbot_default_config, {
+            collapseDepth: expanded ? 1 : DEPTH_MAX
+        }));
+        b.innerText = expanded ? 'Expand all' : 'Collapse all';
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function obj_merge(target, source) {
+        for (var item in source) {
+            if (source.hasOwnProperty(item)) {
+                target[item] = source[item];
+            }
+        }
+        return target;
+    }
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">（译）Golang channels简介</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">December 8, 2013&nbsp;&nbsp;18:40:03</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>原文 <a target="_blank" rel="noopener" href="http://guzalexander.com/2013/12/06/golang-channels-tutorial.html">Golang channels tutorial</a></p>
+<p>作者 <a target="_blank" rel="noopener" href="http://guzalexander.com/">GUZ ALEXANDER</a></p>
+<hr>
+<p>#Golang channels</p>
+<p><a target="_blank" rel="noopener" href="http://golang.org/">Golag</a>内建有对并发程序的支持。在函数调用的前面放置一个<a target="_blank" rel="noopener" href="http://golang.org/ref/spec#Go_statements">go</a>语句，就会在调用代码地址空间的独立并发线程中执行函数。这种线程在go语言中称为<em>goroutine</em>。这里要注意的是并发并非总是表示并行。goroutines是创建并发程序的一种方式，这些程序在硬件允许的条件下可以并行的执行。并发与并行的话题有一个详细的介绍<a target="_blank" rel="noopener" href="http://blog.golang.org/concurrency-is-not-parallelism">Concurrency is not parallelism</a>。</p>
+<p>首先，看一个goroutine的例子：</p>
+<pre><code>func main() &#123;
+     // Start a goroutine and execute println concurrently
+     go println(&quot;goroutine message&quot;)
+     println(&quot;main function message&quot;)
+&#125;
+</code></pre>
+<p>这个程序会打印出<code>main function message</code>，可能会打印出<code>goroutine message</code>。<em>可能</em>是因为goroutine的产生有其特点。当启动goroutine的时候，调用代码（这里是<code>main</code>函数）不会等待goroutine结束，而是继续执行。main函数在调用<code>println</code>之后执行结束，在go语言中这意味着整个程序以及所有产生的goroutines停止执行。不过在程序退出之前，有可能goroutine有可能执行了代码，打印出<code>goroutine message</code>字符串。</p>
+<p>如你所想一定有某种方法可以避免这种情况。Golang里面的<em>channels</em>应运而生。</p>
+<h2 id="Channels基础"><a href="#Channels基础" class="headerlink" title="Channels基础"></a>Channels基础</h2><p>Channels是用来同步并发执行的函数，以及提供了一个通过传递某个特定类型的值在函数间完成通信的机制。Channels有这么几个特性：可以通过channel发送的元素类型，容量（缓冲大小）和通过操作符<code>&lt;-</code>指定的通信方向。可以通过内建的函数<code>make</code>分配信道：</p>
+<pre><code>i := make(chan int)       // by default the capacity is 0
+s := make(chan string, 3) // non-zero capacity
+
+r := make(&lt;-chan bool)          // can only read from
+w := make(chan&lt;- []os.FileInfo) // can only write to
+</code></pre>
+<p>Channels是一等公民，可以像其他的值到处适用：例如struct元素，函数参数，函数返回值，甚至作为另一个channel的类型：</p>
+<pre><code>// a channel which:
+//  - you can only write to
+//  - holds another channel as its value
+c := make(chan&lt;- chan bool)
+
+// function accepts a channel as a parameter
+func readFromChannel(input &lt;-chan string) &#123;&#125;
+
+// function returns a channel
+func getChannel() chan bool &#123;
+     b := make(chan bool)
+     return b
+&#125;
+</code></pre>
+<p>channel的读写是通过操作符<code>&lt;-</code>完成的。它相对于channel变量的位置决定了是读操作还是写操作。下面的例子说明了如何使用，不过由于后面要提到的原因，这段代码是有问题的。</p>
+<pre><code>func main() &#123;
+     c := make(chan int)
+     c &lt;- 42    // write to a channel
+     val := &lt;-c // read from a channel
+     println(val)
+&#125;
+</code></pre>
+<p>现在，我们知道了channel是什么，如何创建他们以及基本的操作，回到第一个例子，看看channel是如何发挥作用的。</p>
+<pre><code>func main() &#123;
+     // Create a channel to synchronize goroutines
+     done := make(chan bool)
+
+     // Execute println in goroutine
+     go func() &#123;
+          println(&quot;goroutine message&quot;)
+
+          // Tell the main function everything is done.
+          // This channel is visible inside this goroutine because
+          // it is executed in the same address space.
+          done &lt;- true
+     &#125;()
+
+     println(&quot;main function message&quot;)
+     &lt;-done // Wait for the goroutine to finish
+&#125;
+</code></pre>
+<p>这个程序会毫无疑问的输出所有消息。为什么？channel<code>done</code>没有任何缓冲（因为没有指定它的容量）。在非缓冲信道上的操作会阻塞代码的执行，直到发送者和接收者可以通信。这就是为什么非缓冲的信道也称为同步的信道。在我们的例子中，main函数中的读操作<code>&lt;-done</code>会阻塞直到goroutine向信道中写入数据。因此，程序只会在读操作完成后退出。</p>
+<p>在带有缓冲的信道中，如果buffer非空，所有的读操作都是成功的，不会阻塞，写操作同理——如果buffer非满。这样的channel称为异步信道。下面的例子说明了他们之间的区别：</p>
+<pre><code>func main() &#123;
+     message := make(chan string) // no buffer
+     count := 3
+
+     go func() &#123;
+          for i := 1; i &lt;= count; i++ &#123;
+               fmt.Println(&quot;send message&quot;)
+               message &lt;- fmt.Sprintf(&quot;message %d&quot;, i)
+          &#125;
+     &#125;()
+
+     time.Sleep(time.Second * 3)
+
+     for i := 1; i &lt;= count; i++ &#123;
+          fmt.Println(&lt;-message)
+     &#125;
+&#125;
+</code></pre>
+<p>在这个例子中，<code>message</code>是一个异步的channel，程序的输出如下：</p>
+<pre><code>send message
+// wait for 3 seconds
+message 1
+send message
+send message
+message 2
+message 3
+</code></pre>
+<p>你会看到，在goroutine中第一次写入后，所有的写操作都阻塞了，直到第一次读操作完成（大概3s后）。</p>
+<p>现在，给信道<code>message</code>增加一个buffer，例如，创建的代码看起来是这个样子的<code>message := make(chan string, 2)</code>。这次，输出如下：</p>
+<pre><code>send message
+send message
+send message
+// wait for 3 seconds
+message 1
+message 2
+message 3
+</code></pre>
+<p>这里，我们可以看到所有的写操作都完成了，而没有等待读操作，因为信道的buffer能够缓冲三条消息。通过修改信道的容量，可以控制正在处理的消息数，从而限制系统的吞吐量。</p>
+<h2 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h2><p>现在，回头看下那段读写操作有问题的代码。</p>
+<pre><code>func main() &#123;
+     c := make(chan int)
+     c &lt;- 42    // write to a channel
+     val := &lt;-c // read from a channel
+     println(val)
+&#125;
+</code></pre>
+<p>运行的时候你会得到这样的出错提示（细节会有所不同）：</p>
+<pre><code>fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan send]:
+main.main()
+     /fullpathtofile/channelsio.go:5 +0x54
+exit status 2
+</code></pre>
+<p>你得到的错误称为<em>deadlock</em>。这种场景是这样的，两个goroutines互相等待，没有人能够继续执行下去。Golang会在运行时检测到死锁，这就是为什么我们能看到这个错误提示。这种错误的发生是通信的阻塞本质所致。</p>
+<p>这里的代码是运行在单一的线程中，一行接着一行，连续执行。对信道的写操作（<code>c &lt;- 42</code>）阻塞了整个程序的执行，因为，我们知道对同步信道的写操作只有在接收者准备接收数据时才会成功。不过我们是在下一行代码中创建接收者的。</p>
+<p>这段代码要变得可执行，可以这样写：</p>
+<pre><code>func main() &#123;
+     c := make(chan int)
+     
+     // Make the writing operation be performed in
+     // another goroutine.
+     go func() &#123; 
+        c &lt;- 42 
+     &#125;()
+     val := &lt;-c
+     println(val)
+&#125;
+</code></pre>
+<h2 id="range-channels-和-closing"><a href="#range-channels-和-closing" class="headerlink" title="range channels 和 closing"></a>range channels 和 closing</h2><p>在前面的一个例子中，我们往信道中发送了好几条消息，然后读取。读取部分的代码是这样的：</p>
+<pre><code>for i := 1; i &lt;= count; i++ &#123;
+     fmt.Println(&lt;-message)
+&#125;
+</code></pre>
+<p>为了执行读取操作同时不会死锁，必须知道发送的消息数（准确的说是<code>count</code>），因为读取的数目不能超过发送的数目。不过这不是很方便。如果能够给出通用的代码就好了。</p>
+<p>在go语言中，有一个称为<em>range expression</em>的东东可以用来迭代arrays，slices，maps和channels。对于channels，迭代会一直运行直到channel关闭。考虑下面的例子（目前还不能运行）：</p>
+<pre><code>func main() &#123;
+     message := make(chan string)
+     count := 3
+
+     go func() &#123;
+          for i := 1; i &lt;= count; i++ &#123;
+               message &lt;- fmt.Sprintf(&quot;message %d&quot;, i)
+          &#125;
+     &#125;()
+
+     for msg := range message &#123;
+          fmt.Println(msg)
+     &#125;
+&#125;
+</code></pre>
+<p>不幸的是，目前这段代码还不能工作。正如前面提到的，<code>range</code>会一直执行直到channel显式关闭。我们所要作的就是通过函数<code>close</code>关闭channel。goroutine看起来是这个样子的：</p>
+<pre><code>go func() &#123;
+     for i := 1; i &lt;= count; i++ &#123;
+          message &lt;- fmt.Sprintf(&quot;message %d&quot;, i)
+     &#125;
+     close(message)
+&#125;()
+</code></pre>
+<p>关闭一个channel好处很多——在关闭的channel上的读操作是不会阻塞的，总是返回channel类型的默认值：</p>
+<pre><code>done := make(chan bool)
+close(done)
+
+// Will not block and will print false twice 
+// because it’s the default value for bool type
+println(&lt;-done)
+println(&lt;-done)
+</code></pre>
+<p>这个特性可以用作goroutines之间的同步。我们回到使用同步的一个例子（就是使用<code>done</code>channel的那个例子）：</p>
+<pre><code>func main() &#123;
+     done := make(chan bool)
+
+     go func() &#123;
+          println(&quot;goroutine message&quot;)
+
+          // We are only interested in the fact of sending itself, 
+          // but not in data being sent.
+          done &lt;- true
+     &#125;()
+
+     println(&quot;main function message&quot;)
+     &lt;-done 
+&#125; 
+</code></pre>
+<p>这里channel<code>done</code>仅仅用来同步代码的执行，而非发送数据。对于这种情形，可以这样做：</p>
+<pre><code>func main() &#123;
+     // Data is irrelevant
+     done := make(chan struct&#123;&#125;)
+
+     go func() &#123;
+          println(&quot;goroutine message&quot;)
+
+          // Just send a signal &quot;I&#39;m done&quot;
+          close(done)
+     &#125;()
+
+     println(&quot;main function message&quot;)
+     &lt;-done
+&#125; 
+</code></pre>
+<p>因为我们在goroutine中关闭了信道，读操作不会阻塞，main函数得以继续执行。</p>
+<h2 id="Mutiple-channels-and-select"><a href="#Mutiple-channels-and-select" class="headerlink" title="Mutiple channels and select"></a>Mutiple channels and select</h2><p>在实际程序中，可能需要不止一个goroutine和channel。更加独立的部分是——需要高效的同步。看一个更加复杂的例子：</p>
+<pre><code>func getMessagesChannel(msg string, delay time.Duration) &lt;-chan string &#123;
+     c := make(chan string)
+     go func() &#123;
+          for i := 1; i &lt;= 3; i++ &#123;
+               c &lt;- fmt.Sprintf(&quot;%s %d&quot;, msg, i)
+               // Wait before sending next message
+               time.Sleep(time.Millisecond * delay)
+          &#125;
+     &#125;()
+     return c
+&#125;
+
+func main() &#123;
+     c1 := getMessagesChannel(&quot;first&quot;, 300)
+     c2 := getMessagesChannel(&quot;second&quot;, 150)
+     c3 := getMessagesChannel(&quot;third&quot;, 10)
+
+     for i := 1; i &lt;= 3; i++ &#123;
+          println(&lt;-c1)
+          println(&lt;-c2)
+          println(&lt;-c3)
+     &#125;
+&#125;
+</code></pre>
+<p>这里我们有一个创建信道的函数，它会产生一个goroutine，以指定的时间间隔向信道中填充3个消息。我们看到信道<code>c3</code>的时间间隔最小，因为我们认为它的消息会在其他消息之前出现。但是输出是这样的：</p>
+<pre><code>first 1
+second 1
+third 1
+first 2
+second 2
+third 2
+first 3
+second 3
+third 3
+</code></pre>
+<p>很明显，我们得到了一个连续的输出。这是由于第一个channel的读操作在每次读操作中阻塞了大概300ms，其他的操作必须等待。我们实际想要的则是只要信道中有消息就要去读。</p>
+<p>在go语言中，对于多个信道之间的通信有一个<a target="_blank" rel="noopener" href="http://golang.org/ref/spec#Select_statements"><code>select</code></a>语句。它跟通常的switch非常接近，不过这里的场景是通信操作（有读和写）。如果case中的条件成立，那么相应的代码块就会执行。所以，要完成我们想要的，可以这么写：</p>
+<pre><code>for i := 1; i &lt;= 9; i++ &#123;
+     select &#123;
+     case msg := &lt;-c1:
+          println(msg)
+     case msg := &lt;-c2:
+          println(msg)
+     case msg := &lt;-c3:
+          println(msg)
+     &#125;
+&#125;
+</code></pre>
+<p>注意到数字9：对于每个信道有3次写操作，这就是为什么必须执行9次select语句。在守护程序中，一个常见的做法是在无限循环中运行select，不过在这里我们会得到死锁。</p>
+<p>现在，我们得到了期待的输出，没有一个读操作会阻塞其他。输出如下：</p>
+<pre><code>first 1
+second 1
+third 1 // this channel does not wait for others
+third 2
+third 3
+second 2
+first 2
+second 3
+first 3
+</code></pre>
+<h2 id="Conclusion"><a href="#Conclusion" class="headerlink" title="Conclusion"></a>Conclusion</h2><p>Channels是go语言中一个非常有用，同时十分有意思的机制。不过要想有效的使用它，需要弄明白它是如何工作。在本文中，作者解释了必要的基础知识。进一步的学习，可以参见下面的资料：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://blog.golang.org/concurrency-is-not-parallelism">Concurrency is not parallelism</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.youtube.com/watch?v=f6kdp27TYZs">Go Concurrency Patterns</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.youtube.com/watch?v=QDDwwePbDtw">Advanced Go Concurrency Patterns</a></li>
+</ul>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>smilenceee</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="http://yoursite.com/%EF%BC%88%E8%AF%91%EF%BC%89Golang%20channels%E7%AE%80%E4%BB%8B/">http://yoursite.com/%EF%BC%88%E8%AF%91%EF%BC%89Golang%20channels%E7%AE%80%E4%BB%8B/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/go/"># go</a>
+                    
+                        <a href="/tags/channel/"># channel</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/libevhtp%E4%BD%BF%E7%94%A8%E5%B0%8F%E8%AE%B0/">libevhtp使用小记</a>
+            
+            
+            <a class="next" rel="next" href="/%EF%BC%88%E8%AF%91%EF%BC%89JSON%E4%B8%8EGo/">（译）JSON与Go</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
