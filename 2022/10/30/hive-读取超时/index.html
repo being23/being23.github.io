@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>hive 读取超时 | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tags">Tags</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tags">Tags</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">hive 读取超时</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">October 30, 2022&nbsp;&nbsp;11:25:10</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>#问题 #hive<br>业务反馈[[hive]] 读取作业执行失败<br><img src="/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/image-20220707143134989_1657247857902_0.png" alt="image-20220707143134989.png"><br>查看了这些失败作业，发现有些许作业是读超时了，异常栈如下</p>
+<pre><code>Caused by: java.net.SocketTimeoutException: Read timed out
+at java.net.SocketInputStream.socketRead0(Native Method)
+at java.net.SocketInputStream.socketRead(SocketInputStream.java:116)
+at java.net.SocketInputStream.read(SocketInputStream.java:171)
+at java.net.SocketInputStream.read(SocketInputStream.java:141)
+at java.io.BufferedInputStream.fill(BufferedInputStream.java:246)
+at java.io.BufferedInputStream.read1(BufferedInputStream.java:286)
+at java.io.BufferedInputStream.read(BufferedInputStream.java:345)
+at org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:127)
+... 30 more
+</code></pre>
+<p>方法<code>java.net.SocketInputStream#socketRead0</code>的定义是</p>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">native</span> <span class="function"><span class="keyword">int</span> <span class="title">socketRead0</span><span class="params">(FileDescriptor fd,</span></span></span><br><span class="line"><span class="params"><span class="function"><span class="keyword">byte</span> b[], <span class="keyword">int</span> off, <span class="keyword">int</span> len,</span></span></span><br><span class="line"><span class="params"><span class="function"><span class="keyword">int</span> timeout)</span></span></span><br><span class="line"><span class="function"><span class="keyword">throws</span> IOException</span>;</span><br></pre></td></tr></table></figure>
+<p>其中，参数<code>timeout</code>的定义是<code>the read timeout in ms</code>。<code>timeout</code>在 141 行调用，由下面的方法传入，即<code>impl.getTimeout()</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="type">int</span> <span class="title function_">read</span><span class="params">(<span class="type">byte</span> b[], <span class="type">int</span> off, <span class="type">int</span> length)</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">  <span class="keyword">return</span> read(b, off, length, impl.getTimeout());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里<code>impl</code>是类<code>AbstractPlainSocketImpl</code>的一个实例，方法<code>getTimeout()</code>返回成员变量<code>timeout</code>，该成员在方法<code>java.net.AbstractPlainSocketImpl#setOption</code>中设置</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">setOption</span><span class="params">(<span class="type">int</span> opt, Object val)</span> <span class="keyword">throws</span> SocketException &#123;</span><br><span class="line">  <span class="comment">//...</span></span><br><span class="line">  <span class="keyword">case</span> SO_TIMEOUT:</span><br><span class="line">  <span class="keyword">if</span> (val == <span class="literal">null</span> || (!(val <span class="keyword">instanceof</span> Integer)))</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">SocketException</span>(<span class="string">&quot;Bad parameter for SO_TIMEOUT&quot;</span>);</span><br><span class="line">  <span class="type">int</span> <span class="variable">tmp</span> <span class="operator">=</span> ((Integer) val).intValue();</span><br><span class="line">  <span class="keyword">if</span> (tmp &lt; <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;timeout &lt; 0&quot;</span>);</span><br><span class="line">  timeout = tmp;</span><br><span class="line">  <span class="keyword">break</span>;</span><br><span class="line">  <span class="comment">//...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个方法有 3 处调用<br><img src="/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/image-20220708105432620_1657264951019_0.png" alt="image-20220708105432620.png"><br>如何知道哪个调用是与 hive 有关系呢？不太好找，因为有太多的调用方了。换个思路，从 hive 入手，知道肯定会执行到这里，所以打个断点，当执行到断点时，查看调用栈，就知道执行过程了。<br><img src="/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/image-20220708144551916_1657264974671_0.png" alt="image-20220708144551916.png"><br>这里大致流程是<br><code>com.dtstack.flinkx.hive.format.HiveInputFormat#openInternal</code>拿到查询 SQL<code>querySql</code>并执行查询<br>查询是通过方法<code>com.dtstack.flinkx.hive.format.HiveInputFormat#executeQuery</code>实现，首先获取数据库连接<code>dbConn</code><br>数据库连接通过方法<code>com.dtstack.flinkx.rdb.inputformat.JdbcInputFormat#getConnection</code> 获取，内部有个重试，调用<code>DriverManager.getConnection()</code><br><code>DriverManager</code>内部遍历注册的 drivers ，并连接，见方法<code>java.sql.DriverManager#getConnection(java.lang.String, java.util.Properties, java.lang.Class&lt;?&gt;)</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span>(DriverInfo aDriver : registeredDrivers) &#123;</span><br><span class="line">  <span class="comment">// If the caller does not have permission to load the driver then</span></span><br><span class="line">  <span class="comment">// skip it.</span></span><br><span class="line">  <span class="keyword">if</span>(isDriverAllowed(aDriver.driver, callerCL)) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      println(<span class="string">&quot;    trying &quot;</span> + aDriver.driver.getClass().getName());</span><br><span class="line">      <span class="type">Connection</span> <span class="variable">con</span> <span class="operator">=</span> aDriver.driver.connect(url, info); <span class="comment">//连接</span></span><br><span class="line">      <span class="keyword">if</span> (con != <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="comment">// Success!</span></span><br><span class="line">        println(<span class="string">&quot;getConnection returning &quot;</span> + aDriver.driver.getClass().getName());</span><br><span class="line">        <span class="keyword">return</span> (con);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (SQLException ex) &#123;</span><br><span class="line">      <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    println(<span class="string">&quot;    skipping: &quot;</span> + aDriver.getClass().getName());</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Hive 场景下，注册的 driver 是 <code>HiveDriver</code>，connect 方法中就是创建一个<code>HiveConnection</code> 对象</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> Connection <span class="title function_">connect</span><span class="params">(String url, Properties info)</span> <span class="keyword">throws</span> SQLException &#123;</span><br><span class="line">  <span class="keyword">return</span> acceptsURL(url) ? <span class="keyword">new</span> <span class="title class_">HiveConnection</span>(url, info) : <span class="literal">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对象<code>HiveConnection</code>的构造方法如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="title function_">HiveConnection</span><span class="params">(String uri, Properties info)</span> <span class="keyword">throws</span> SQLException &#123;</span><br><span class="line">  setupLoginTimeout(); </span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    connParams = Utils.parseURL(uri);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (ZooKeeperHiveClientException e) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">SQLException</span>(e);</span><br><span class="line">  &#125;</span><br><span class="line">  jdbcUriString = connParams.getJdbcUriString();</span><br><span class="line">  <span class="comment">// extract parsed connection parameters:</span></span><br><span class="line">  <span class="comment">// JDBC URL: jdbc:hive2://&lt;host&gt;:&lt;port&gt;/dbName;sess_var_list?hive_conf_list#hive_var_list</span></span><br><span class="line">  <span class="comment">// each list: &lt;key1&gt;=&lt;val1&gt;;&lt;key2&gt;=&lt;val2&gt; and so on</span></span><br><span class="line">  <span class="comment">// sess_var_list -&gt; sessConfMap</span></span><br><span class="line">  <span class="comment">// hive_conf_list -&gt; hiveConfMap</span></span><br><span class="line">  <span class="comment">// hive_var_list -&gt; hiveVarMap</span></span><br><span class="line">  host = connParams.getHost();</span><br><span class="line">  port = connParams.getPort();</span><br><span class="line">  sessConfMap = connParams.getSessionVars();</span><br><span class="line">  hiveConfMap = connParams.getHiveConfs();</span><br><span class="line"></span><br><span class="line">  hiveVarMap = connParams.getHiveVars();</span><br><span class="line">  <span class="keyword">for</span> (Map.Entry&lt;Object, Object&gt; kv : info.entrySet()) &#123;</span><br><span class="line">    <span class="keyword">if</span> ((kv.getKey() <span class="keyword">instanceof</span> String)) &#123;</span><br><span class="line">      <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> (String) kv.getKey();</span><br><span class="line">      <span class="keyword">if</span> (key.startsWith(HIVE_VAR_PREFIX)) &#123;</span><br><span class="line">        hiveVarMap.put(key.substring(HIVE_VAR_PREFIX.length()), info.getProperty(key));</span><br><span class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (key.startsWith(HIVE_CONF_PREFIX)) &#123;</span><br><span class="line">        hiveConfMap.put(key.substring(HIVE_CONF_PREFIX.length()), info.getProperty(key));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  isEmbeddedMode = connParams.isEmbeddedMode();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (isEmbeddedMode) &#123;</span><br><span class="line">    <span class="type">EmbeddedThriftBinaryCLIService</span> <span class="variable">embeddedClient</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">EmbeddedThriftBinaryCLIService</span>();</span><br><span class="line">    embeddedClient.init(<span class="keyword">new</span> <span class="title class_">HiveConf</span>());</span><br><span class="line">    client = embeddedClient;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// extract user/password from JDBC connection properties if its not supplied in the</span></span><br><span class="line">    <span class="comment">// connection URL</span></span><br><span class="line">    <span class="keyword">if</span> (info.containsKey(JdbcConnectionParams.AUTH_USER)) &#123;</span><br><span class="line">      sessConfMap.put(JdbcConnectionParams.AUTH_USER, info.getProperty(JdbcConnectionParams.AUTH_USER));</span><br><span class="line">      <span class="keyword">if</span> (info.containsKey(JdbcConnectionParams.AUTH_PASSWD)) &#123;</span><br><span class="line">        sessConfMap.put(JdbcConnectionParams.AUTH_PASSWD, info.getProperty(JdbcConnectionParams.AUTH_PASSWD));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (info.containsKey(JdbcConnectionParams.AUTH_TYPE)) &#123;</span><br><span class="line">      sessConfMap.put(JdbcConnectionParams.AUTH_TYPE, info.getProperty(JdbcConnectionParams.AUTH_TYPE));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// open the client transport</span></span><br><span class="line">    openTransport(); <span class="comment">// 从这里开始</span></span><br><span class="line">    <span class="comment">// set up the client</span></span><br><span class="line">    client = <span class="keyword">new</span> <span class="title class_">TCLIService</span>.Client(<span class="keyword">new</span> <span class="title class_">TBinaryProtocol</span>(transport));</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// add supported protocols</span></span><br><span class="line">  supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V1);</span><br><span class="line">  supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V2);</span><br><span class="line">  supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V3);</span><br><span class="line">  supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V4);</span><br><span class="line">  supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V5);</span><br><span class="line">  supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V6);</span><br><span class="line">  supportedProtocols.add(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V7);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// open client session</span></span><br><span class="line">  openSession();</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Wrap the client with a thread-safe proxy to serialize the RPC calls</span></span><br><span class="line">  client = newSynchronizedClient(client);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>调用方法<code>setupLoginTimeout()</code>设置<code>loginTimeout</code>，内部获取的是<code>java.sql.DriverManager#loginTimeout</code>，这个变量是类的 static 成员，就是参考资料中提到的多个 JDBC driver 驱动存在时，会被覆盖导致问题<br>调用<code>org.apache.hive.jdbc.Utils#parseURL</code>解析 jdbc url 连接， <code>jdbc:hive2://&lt;host1&gt;:&lt;port1&gt;,&lt;host2&gt;:&lt;port2&gt;/dbName;sess_var_list?hive_conf_list#hive_var_list</code>，其中几个 list 是以<code>;</code>分隔的键值对，分别对应 URI 的 path、query和fragment，内部也是用 URI 类来提取的各个部分的<br>调用方法<code>org.apache.hive.jdbc.HiveConnection#openTransport</code>打开客户端连接，判断是个二进制协议还是 http 协议，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">openTransport</span><span class="params">()</span> <span class="keyword">throws</span> SQLException &#123;</span><br><span class="line">  <span class="type">int</span> <span class="variable">numRetries</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">  <span class="type">int</span> <span class="variable">maxRetries</span> <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    maxRetries = Integer.parseInt(sessConfMap.get(JdbcConnectionParams.RETRIES));</span><br><span class="line">  &#125; <span class="keyword">catch</span>(NumberFormatException e) &#123;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      assumeSubject =</span><br><span class="line">        JdbcConnectionParams.AUTH_KERBEROS_AUTH_TYPE_FROM_SUBJECT.equals(sessConfMap</span><br><span class="line">                                                                         .get(JdbcConnectionParams.AUTH_KERBEROS_AUTH_TYPE));</span><br><span class="line">      transport = isHttpTransportMode() ? createHttpTransport() : createBinaryTransport(); <span class="comment">//判断是个二进制协议还是 http 协议，</span></span><br><span class="line">      <span class="keyword">if</span> (!transport.isOpen()) &#123;</span><br><span class="line">        transport.open();</span><br><span class="line">      &#125;</span><br><span class="line">      logZkDiscoveryMessage(<span class="string">&quot;Connected to &quot;</span> + connParams.getHost() + <span class="string">&quot;:&quot;</span> + connParams.getPort());</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (TTransportException e) &#123;</span><br><span class="line">      <span class="comment">// We&#x27;ll retry till we exhaust all HiveServer2 nodes from ZooKeeper</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里是二进制，调用方法<code>org.apache.hive.jdbc.HiveConnection#createBinaryTransport</code>，内部调用<code>org.apache.hive.jdbc.HiveConnection#createUnderlyingTransport</code>创建底层的 transport</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> TTransport <span class="title function_">createUnderlyingTransport</span><span class="params">()</span> <span class="keyword">throws</span> TTransportException &#123;</span><br><span class="line">  <span class="type">TTransport</span> <span class="variable">transport</span> <span class="operator">=</span> <span class="literal">null</span>;</span><br><span class="line">  <span class="comment">// Note: Thrift returns an SSL socket that is already bound to the specified host:port</span></span><br><span class="line">  <span class="comment">// Therefore an open called on this would be a no-op later</span></span><br><span class="line">  <span class="comment">// Hence, any TTransportException related to connecting with the peer are thrown here.</span></span><br><span class="line">  <span class="comment">// Bubbling them up the call hierarchy so that a retry can happen in openTransport,</span></span><br><span class="line">  <span class="comment">// if dynamic service discovery is configured.</span></span><br><span class="line">  <span class="keyword">if</span> (isSslConnection()) &#123;</span><br><span class="line">    <span class="comment">// get SSL socket</span></span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// get non-SSL socket transport</span></span><br><span class="line">    transport = HiveAuthUtils.getSocketTransport(host, port, loginTimeout);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> transport;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里获取 transport 的时候，传了<code>loginTimeout</code><br>方法<code>org.apache.hadoop.hive.common.auth.HiveAuthUtils#getSocketTransport</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> TTransport <span class="title function_">getSocketTransport</span><span class="params">(String host, <span class="type">int</span> port, <span class="type">int</span> loginTimeout)</span> &#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">TSocket</span>(host, port, loginTimeout);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>继续看 <code>TSocket</code> 的初始化</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="title function_">TSocket</span><span class="params">(String host, <span class="type">int</span> port, <span class="type">int</span> timeout)</span> &#123;</span><br><span class="line">  <span class="built_in">this</span>.socket_ = <span class="literal">null</span>;</span><br><span class="line">  <span class="built_in">this</span>.host_ = <span class="literal">null</span>;</span><br><span class="line">  <span class="built_in">this</span>.port_ = <span class="number">0</span>;</span><br><span class="line">  <span class="built_in">this</span>.timeout_ = <span class="number">0</span>;</span><br><span class="line">  <span class="built_in">this</span>.host_ = host;</span><br><span class="line">  <span class="built_in">this</span>.port_ = port;</span><br><span class="line">  <span class="built_in">this</span>.timeout_ = timeout;</span><br><span class="line">  <span class="built_in">this</span>.initSocket(); <span class="comment">//</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">initSocket</span><span class="params">()</span> &#123;</span><br><span class="line">  <span class="built_in">this</span>.socket_ = <span class="keyword">new</span> <span class="title class_">Socket</span>();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="built_in">this</span>.socket_.setSoLinger(<span class="literal">false</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="built_in">this</span>.socket_.setTcpNoDelay(<span class="literal">true</span>);</span><br><span class="line">    <span class="built_in">this</span>.socket_.setKeepAlive(<span class="literal">true</span>);</span><br><span class="line">    <span class="built_in">this</span>.socket_.setSoTimeout(<span class="built_in">this</span>.timeout_); <span class="comment">//</span></span><br><span class="line">  &#125; <span class="keyword">catch</span> (SocketException var2) &#123;</span><br><span class="line">    LOGGER.error(<span class="string">&quot;Could not configure socket.&quot;</span>, var2);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>java.net.Socket#setSoTimeout</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">setSoTimeout</span><span class="params">(<span class="type">int</span> timeout)</span> <span class="keyword">throws</span> SocketException &#123;</span><br><span class="line">  <span class="keyword">if</span> (isClosed())</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">SocketException</span>(<span class="string">&quot;Socket is closed&quot;</span>);</span><br><span class="line">  <span class="keyword">if</span> (timeout &lt; <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;timeout can&#x27;t be negative&quot;</span>);</span><br><span class="line"></span><br><span class="line">  getImpl().setOption(SocketOptions.SO_TIMEOUT, <span class="keyword">new</span> <span class="title class_">Integer</span>(timeout)); <span class="comment">//</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里设置的是 socket 的读取超时，实际上 timeout_，也用于 socket 连接超时<br>最后看下，<code>java.sql.DriverManager#loginTimeout</code>是如何设置的，类似的，添加断点，发现是在方法<code>com.dtstack.flinkx.util.ClassUtil#forName(java.lang.String, java.lang.ClassLoader)</code>中设置，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">forName</span><span class="params">(String clazz, ClassLoader classLoader)</span>  &#123;</span><br><span class="line">  <span class="keyword">synchronized</span> (LOCK_STR)&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      Class.forName(clazz, <span class="literal">true</span>, classLoader);</span><br><span class="line">      DriverManager.setLoginTimeout(<span class="number">10</span>); <span class="comment">//10s</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">RuntimeException</span>(e);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/image-20220708110105135_1657265225155_0.png" alt="image-20220708110105135.png"></p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>To persevere is important. Don't give up, don't give in. There's an answer to everything.</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/hive/"># hive</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+            
+            <a class="next" rel="next" href="/2022/10/30/PG-%E8%AF%BB%E5%8F%96%E5%A4%A7%E9%87%8F%E6%95%B0%E6%8D%AE%E5%9B%A0%E4%B8%B4%E6%97%B6%E7%A9%BA%E9%97%B4%E4%B8%8D%E8%B6%B3%E5%AF%BC%E8%87%B4%E4%BB%BB%E5%8A%A1%E5%A4%B1%E8%B4%A5/">PG 读取大量数据因临时空间不足导致任务失败</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
