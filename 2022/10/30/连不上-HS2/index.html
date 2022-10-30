@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="smilenceee">
+
+
+    <meta name="subtitle" content="to myself">
+
+
+
+
+<title>连不上 HS2 | recording &amp; rethinking</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
+            const isDark = currentTheme === 'dark';
+            const pagebody = document.getElementsByTagName('body')[0]
+            if (isDark) {
+                pagebody.classList.add('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
+            } else {
+                pagebody.classList.remove('dark-theme');
+                // mobile
+                document.getElementById("mobile-toggle-theme").innerText = "· Light"
+            }
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tags">Tags</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/tags">Tags</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">连不上 HS2</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">October 30, 2022&nbsp;&nbsp;11:43:37</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>作业执行失败报错如下  </p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Tried <span class="attribute">all</span> existing HiveServer2 uris <span class="selector-tag">from</span> ZooKeeper.</span><br></pre></td></tr></table></figure>
+
+<p>目前 HS2 通过 ZK 做了 HA，从报错日志看，将 ZK 里面配置的 HS2 依次连接了一遍，都失败了。过往的经验是有两个可能的问题</p>
+<p>jdbc 连接串（ <code>jdbc:hive2://10.1.183.246,10.1.178.113,10.1.166.18:2181/usercenter;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=sgp -com-hive;hive.server2.proxy.user=sg_ib_dw?mapred.job.queue.name=root.ib.sgoffline</code> ）有问题<br>HS2 地址中使用的是主机名，从主机名解析获取 IP 地址失败</p>
+<p>第一个问题通过 beeline 连接给定的 jdbc 连接串验证，可以连上，说明不是这个问题；  </p>
+<p>第二个问题可以从 ZK 中获取 HS2 地址，通过 ping 或者 telnet 命令验证，验证通过，说明也不是这个问题  </p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">获取 HS2 地址</span></span><br><span class="line">[zk: 10.1.166.18:2181(CONNECTED) 0] ls /sgp-com-hive</span><br><span class="line">[serverUri=10-94-12-217.sgp-com-hiveserver2.sgp:10000;version=2.3.7-amzn-1;sequence=0000001812, serverUri=10-94-104-44.sgp-com-hiveserver2.sgp:10000;version=2.3.7-amzn-1;sequence=0000001795, serverUri=10-94-106-212.sgp-com-hiveserver2.sgp:10000;version=2.3.7-amzn-1;sequence=0000001771]</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">telnet 验证</span></span><br><span class="line">[service@10-94-48-163.datahub-api.sgp lib]$ telnet 10-94-12-217.sgp-com-hiveserver2.sgp 10000</span><br><span class="line">Trying 10.94.12.217...</span><br><span class="line">Connected to 10-94-12-217.sgp-com-hiveserver2.sgp.</span><br><span class="line">Escape character is &#x27;^]&#x27;.</span><br><span class="line">^]</span><br><span class="line"><span class="meta prompt_">telnet&gt; </span><span class="language-bash">quit</span></span><br><span class="line">Connection closed.</span><br></pre></td></tr></table></figure>
+
+<p>接下来，看下 hive jdbc 是如何创建连接的，从异常栈中是看到相关的类是  <code>org.apache.hive.jdbc.HiveConnection#HiveConnection</code> ，之前在<a href="hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6">hive-读取超时</a>中有描述 jdbc 打开 hive 连接的大致流程，接下来看下其中遍历 ZK 中配置的 HS2，依次尝试连接，直到成功或者失败的过程。  </p>
+<p>从方法 <code>org.apache.hive.jdbc.Utils#parseURL</code> 开始解析 jdbc url 连接， <code>jdbc:hive2://&lt;host1&gt;:&lt;port1&gt;,&lt;host2&gt;:&lt;port2&gt;/dbName;sess_var_list?hive_conf_list#hive_var_list</code> ，其中几个 list 是以 <code>;</code> 分隔的键值对，分别对应 URI 的 path、query和fragment，内部也是用 URI 类来提取的各个部分的。最后会调用 <code>org.apache.hive.jdbc.Utils#configureConnParams</code>  处理 <code>connParams</code> ，从 ZK 中获取真实的主机和端口，并替换 <code>dummyAuthorityString</code> 。  </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> JdbcConnectionParams <span class="title function_">parseURL</span><span class="params">(String uri)</span> <span class="keyword">throws</span> JdbcUriParseException,</span><br><span class="line">SQLException, ZooKeeperHiveClientException &#123;</span><br><span class="line">  <span class="type">JdbcConnectionParams</span> <span class="variable">connParams</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">JdbcConnectionParams</span>();</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  <span class="comment">// Extract host, port</span></span><br><span class="line">  <span class="keyword">if</span> (connParams.isEmbeddedMode()) &#123;</span><br><span class="line">    <span class="comment">// In case of embedded mode we were supplied with an empty authority.</span></span><br><span class="line">    <span class="comment">// So we never substituted the authority with a dummy one.</span></span><br><span class="line">    connParams.setHost(jdbcURI.getHost());</span><br><span class="line">    connParams.setPort(jdbcURI.getPort());</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// Configure host, port and params from ZooKeeper if used,</span></span><br><span class="line">    <span class="comment">// and substitute the dummy authority with a resolved one</span></span><br><span class="line">    configureConnParams(connParams); <span class="comment">//就是这里</span></span><br><span class="line">    <span class="comment">// We check for invalid host, port while configuring connParams with configureConnParams()</span></span><br><span class="line">    <span class="type">String</span> <span class="variable">authorityStr</span> <span class="operator">=</span> connParams.getHost() + <span class="string">&quot;:&quot;</span> + connParams.getPort();</span><br><span class="line">    LOG.info(<span class="string">&quot;Resolved authority: &quot;</span> + authorityStr);</span><br><span class="line">    uri = uri.replace(dummyAuthorityString, authorityStr);</span><br><span class="line">    connParams.setJdbcUriString(uri);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> connParams;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>方法 <code>org.apache.hive.jdbc.Utils#configureConnParams</code> 内部会判断服务发现模式是不是 <code>zooKeeper</code> （在 jdbc url 的 session var 中有给出，即： <code>serviceDiscoveryMode=zooKeeper;</code> ），执行 <code>org.apache.hive.jdbc.ZooKeeperHiveClientHelper#configureConnParams</code> 从 ZK 获取配置  </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">configureConnParams</span><span class="params">(JdbcConnectionParams connParams)</span></span><br><span class="line">  <span class="keyword">throws</span> JdbcUriParseException, ZooKeeperHiveClientException &#123;</span><br><span class="line">  <span class="type">String</span> <span class="variable">serviceDiscoveryMode</span> <span class="operator">=</span></span><br><span class="line">    connParams.getSessionVars().get(JdbcConnectionParams.SERVICE_DISCOVERY_MODE);</span><br><span class="line">  <span class="keyword">if</span> ((serviceDiscoveryMode != <span class="literal">null</span>)</span><br><span class="line">      &amp;&amp; (JdbcConnectionParams.SERVICE_DISCOVERY_MODE_ZOOKEEPER</span><br><span class="line">          .equalsIgnoreCase(serviceDiscoveryMode))) &#123;</span><br><span class="line">    <span class="comment">// Set ZooKeeper ensemble in connParams for later use</span></span><br><span class="line">    connParams.setZooKeeperEnsemble(joinStringArray(connParams.getAuthorityList(), <span class="string">&quot;,&quot;</span>));</span><br><span class="line">    <span class="comment">// Configure using ZooKeeper</span></span><br><span class="line">    ZooKeeperHiveClientHelper.configureConnParams(connParams);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>看方法 <code>org.apache.hive.jdbc.ZooKeeperHiveClientHelper#configureConnParams</code> 内部实现<br>从指定空间（在 jdbc url 的 session var 中指定：即 <code>zooKeeperNamespace=sgp-com-hive</code> ）中获取 HS2 列表 <code>serverHosts</code><br>将 <code>serverHosts</code> 中已经尝试连接过的 HS2 剔除掉（连接失败的 HS2 会记录到^^拒绝连接列表^^中，下文中有描述）<br>如果没有可用的 HS2，就抛出前面任务失败的异常 <code>Tried all existing HiveServer2 uris from ZooKeeper.</code><br>从可用的 HS2 随机选择一个，获取对应 znode 内容  <code>serverConfStr</code> ，即对应 HS2 的配置：</p>
+<figure class="highlight subunit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[zk: 10.1.166.18:2181(CONNECTED) 0] ls /sgp-com-hive</span><br><span class="line">[serverUri=10<span class="string">-94</span><span class="string">-12</span><span class="string">-217</span>.sgp-com-hiveserver2.sgp:10000;version=2.3.7-amzn<span class="string">-1</span>;sequence=0000001812, serverUri=10<span class="string">-94</span><span class="string">-104</span><span class="string">-44</span>.sgp-com-hiveserver2.sgp:10000;version=2.3.7-amzn<span class="string">-1</span>;sequence=0000001795, serverUri=10<span class="string">-94</span><span class="string">-106</span><span class="string">-212</span>.sgp-com-hiveserver2.sgp:10000;version=2.3.7-amzn<span class="string">-1</span>;sequence=0000001771]</span><br><span class="line">[zk: 10.1.166.18:2181(CONNECTED) 1] get /sgp-com-hive/serverUri=10<span class="string">-94</span><span class="string">-12</span><span class="string">-217</span>.sgp-com-hiveserver2.sgp:10000;version=2.3.7-amzn<span class="string">-1</span>;sequence=0000001812</span><br><span class="line">hive.server2.authentication=CUSTOM;hive.server2.transport.mode=binary;hive.server2.thrift.sasl.qop=auth;hive.server2.thrift.bind.host=10<span class="string">-94</span><span class="string">-12</span><span class="string">-217</span>.sgp-com-hiveserver2.sgp;hive.server2.thrift.port=10000;hive.server2.use.SSL=false</span><br></pre></td></tr></table></figure>
+
+<p>重新整理后如下  </p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">hive.server2.authentication</span>=CUSTOM<span class="comment">;</span></span><br><span class="line"><span class="attr">hive.server2.transport.mode</span>=binary<span class="comment">;</span></span><br><span class="line"><span class="attr">hive.server2.thrift.sasl.qop</span>=auth<span class="comment">;</span></span><br><span class="line"><span class="attr">hive.server2.thrift.bind.host</span>=<span class="number">10</span>-<span class="number">94</span>-<span class="number">12</span>-<span class="number">217</span>.sgp-com-hiveserver2.sgp<span class="comment">;</span></span><br><span class="line"><span class="attr">hive.server2.thrift.port</span>=<span class="number">10000</span><span class="comment">;</span></span><br><span class="line"><span class="attr">hive.server2.use.SSL</span>=<span class="literal">false</span></span><br></pre></td></tr></table></figure>
+<p>调用方法 <code>applyConfs</code>  应用配置 <code>serverConfStr</code> ，即将上面的配置依次设置到 <code>connParams</code> 中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">configureConnParams</span><span class="params">(JdbcConnectionParams connParams)</span></span><br><span class="line">  <span class="keyword">throws</span> ZooKeeperHiveClientException &#123;</span><br><span class="line">  <span class="comment">//省略...</span></span><br><span class="line">  serverHosts = zooKeeperClient.getChildren().forPath(<span class="string">&quot;/&quot;</span> + zooKeeperNamespace);</span><br><span class="line">  <span class="comment">// Remove the znodes we&#x27;ve already tried from this list</span></span><br><span class="line">  serverHosts.removeAll(connParams.getRejectedHostZnodePaths());</span><br><span class="line">  <span class="keyword">if</span> (serverHosts.isEmpty()) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ZooKeeperHiveClientException</span>(</span><br><span class="line">      <span class="string">&quot;Tried all existing HiveServer2 uris from ZooKeeper.&quot;</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Now pick a server node randomly</span></span><br><span class="line">  serverNode = serverHosts.get(randomizer.nextInt(serverHosts.size()));</span><br><span class="line">  connParams.setCurrentHostZnodePath(serverNode);</span><br><span class="line">  <span class="comment">// Read config string from the znode for this server node</span></span><br><span class="line">  <span class="type">String</span> <span class="variable">serverConfStr</span> <span class="operator">=</span></span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">String</span>(</span><br><span class="line">    zooKeeperClient.getData().forPath(<span class="string">&quot;/&quot;</span> + zooKeeperNamespace + <span class="string">&quot;/&quot;</span> + serverNode),</span><br><span class="line">    Charset.forName(<span class="string">&quot;UTF-8&quot;</span>));</span><br><span class="line">  applyConfs(serverConfStr, connParams);</span><br><span class="line">  <span class="comment">//省略 ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>支持连接参数 <code>connParams</code> 初始化完成，接下来调用方法 <code>org.apache.hive.jdbc.HiveConnection#openTransport</code> 打开与 ThriftServer 的连接，在一个 while true 的循环中尝试连接，处理异常。看下其中处理打开异常的部分：   </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">openTransport</span><span class="params">()</span> <span class="keyword">throws</span> SQLException &#123;</span><br><span class="line">  <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      transport = isHttpTransportMode() ? createHttpTransport() : createBinaryTransport();</span><br><span class="line">      <span class="keyword">if</span> (!transport.isOpen()) &#123;</span><br><span class="line">        transport.open();</span><br><span class="line">      &#125;</span><br><span class="line">      logZkDiscoveryMessage(<span class="string">&quot;Connected to &quot;</span> + connParams.getHost() + <span class="string">&quot;:&quot;</span> + connParams.getPort());</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (TTransportException e) &#123;</span><br><span class="line">      <span class="comment">// We&#x27;ll retry till we exhaust all HiveServer2 nodes from ZooKeeper</span></span><br><span class="line">      <span class="keyword">if</span> (isZkDynamicDiscoveryMode()) &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">          Utils.updateConnParamsFromZooKeeper(connParams); <span class="comment">//这里</span></span><br><span class="line">          <span class="comment">//...</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>在通过 ZK 做动态发现模式下（方法 <code>isZkDynamicDiscoveryMode()</code> ）,调用方法 <code>org.apache.hive.jdbc.Utils#updateConnParamsFromZooKeeper</code> 重新获取一个 HS2<br>首先，将当前尝试连接的节点节点添加到^^拒绝节点列表^^中<br>暂存当前使用 HS2 的 host 和 port<br>调用前面介绍的方法 <code>org.apache.hive.jdbc.ZooKeeperHiveClientHelper#configureConnParams</code> 重新获取一个 HS2<br>使用新获取的 HS2 的 host 和 port 替换旧的 </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">updateConnParamsFromZooKeeper</span><span class="params">(JdbcConnectionParams connParams)</span></span><br><span class="line">  <span class="keyword">throws</span> ZooKeeperHiveClientException &#123;</span><br><span class="line">  <span class="comment">// Add current host to the rejected list</span></span><br><span class="line">  connParams.getRejectedHostZnodePaths().add(connParams.getCurrentHostZnodePath());</span><br><span class="line">  <span class="type">String</span> <span class="variable">oldServerHost</span> <span class="operator">=</span> connParams.getHost();</span><br><span class="line">  <span class="type">int</span> <span class="variable">oldServerPort</span> <span class="operator">=</span> connParams.getPort();</span><br><span class="line">  <span class="comment">// Update connection params (including host, port) from ZooKeeper</span></span><br><span class="line">  ZooKeeperHiveClientHelper.configureConnParams(connParams);</span><br><span class="line">  connParams.setJdbcUriString(connParams.getJdbcUriString().replace(</span><br><span class="line">    oldServerHost + <span class="string">&quot;:&quot;</span> + oldServerPort, connParams.getHost() + <span class="string">&quot;:&quot;</span> + connParams.getPort()));</span><br><span class="line">  LOG.info(<span class="string">&quot;Selected HiveServer2 instance with uri: &quot;</span> + connParams.getJdbcUriString());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>至此，通过 ZK 来实现 HS2 高可用的流程就结束了。  </p>
+<p>看来问题还是在连接 HS2 出现了异常，即 <code>transport.open();</code> 这里，内部的代码没有细看，大致用了 SASL 做认证，其中会从  <code>sessConfMap</code>  中获取用户和密码，会不会是认证出现了问题了？  </p>
+<p>用户名和密码是在创建对象 <code>HiveConnection</code> 是，从传入变量 <code>info</code> 中拿到后设置到 <code>sessConfMap</code> 中的  </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (info.containsKey(JdbcConnectionParams.AUTH_USER)) &#123;</span><br><span class="line">  sessConfMap.put(JdbcConnectionParams.AUTH_USER, info.getProperty(JdbcConnectionParams.AUTH_USER));</span><br><span class="line">  <span class="keyword">if</span> (info.containsKey(JdbcConnectionParams.AUTH_PASSWD)) &#123;</span><br><span class="line">    sessConfMap.put(JdbcConnectionParams.AUTH_PASSWD, info.getProperty(JdbcConnectionParams.AUTH_PASSWD));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>结合前面的异常栈以及<a target="_blank" rel="noopener" href="https://odocs.myoas.com/docs/rp3OV8gjwoc5bOAm">问题-20220706-hive 执行出错</a>中描述，这个 <code>info</code> 就是 <code>com.dtstack.flinkx.hive.format.HiveInputFormat#executeQuery</code> 这里的 <code>properties</code> ，这个 <code>properties</code> 是从配置文件中获取的，检查后，发现配置是 null  </p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">&quot;increColumn&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&quot;</span><span class="punctuation">,</span></span><br><span class="line"><span class="attr">&quot;properties&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line"><span class="attr">&quot;splitPk&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&quot;</span><span class="punctuation">,</span></span><br><span class="line"><span class="attr">&quot;startLocation&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&quot;</span><span class="punctuation">,</span></span><br></pre></td></tr></table></figure>
+
+<p>这些问题大致明白了——没有获取到用户名和密码导致 HS2 连接失败。  </p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>To persevere is important. Don't give up, don't give in. There's an answer to everything.</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/hive/"># hive</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+            
+            <a class="next" rel="next" href="/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/">hive 读取超时</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
