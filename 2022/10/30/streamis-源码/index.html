@@ -1,151 +1,230 @@
 <!DOCTYPE html>
-<html lang="">
-
+<html lang="default">
 <head>
-    <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-<meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
 
-    <meta name="author" content="smilenceee">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
 
-
-    <meta name="subtitle" content="to myself">
-
-
-
-
-<title>streamis 源码 | recording &amp; rethinking</title>
+<link rel="stylesheet" href="/css/main.css">
 
 
 
-    <link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha256-AbA177XfpSnFEvgpYu1jMygiLabzPCJCRIBtR5jGc0k=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"yoursite.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.13.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="执行流程flowchart TD 构建单次作业 --&gt; 提交创建引擎 提交创建引擎 --&gt; 获取引擎信息 获取引擎信息 --&gt; 更新作业状态   构建一次性作业 访问接口&#x2F;streamis&#x2F;streamJobManager&#x2F;job&#x2F;execute，从数据库中获取 job 信息，封装到StreamisTransformJob实例 中，再经过一系列的转换（Transform）处理（添加 labels、">
+<meta property="og:type" content="article">
+<meta property="og:title" content="streamis 源码">
+<meta property="og:url" content="http://yoursite.com/2022/10/30/streamis-%E6%BA%90%E7%A0%81/index.html">
+<meta property="og:site_name" content="Recording &amp; Rethinking">
+<meta property="og:description" content="执行流程flowchart TD 构建单次作业 --&gt; 提交创建引擎 提交创建引擎 --&gt; 获取引擎信息 获取引擎信息 --&gt; 更新作业状态   构建一次性作业 访问接口&#x2F;streamis&#x2F;streamJobManager&#x2F;job&#x2F;execute，从数据库中获取 job 信息，封装到StreamisTransformJob实例 中，再经过一系列的转换（Transform）处理（添加 labels、">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-10-30T04:44:10.000Z">
+<meta property="article:modified_time" content="2022-11-04T17:09:35.487Z">
+<meta property="article:author" content="smilenceee">
+<meta property="article:tag" content="streamis">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://yoursite.com/2022/10/30/streamis-%E6%BA%90%E7%A0%81/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"default","comments":true,"permalink":"http://yoursite.com/2022/10/30/streamis-%E6%BA%90%E7%A0%81/","path":"2022/10/30/streamis-源码/","title":"streamis 源码"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>streamis 源码 | Recording & Rethinking</title>
+  
 
 
 
 
-    <!-- stylesheets list from _config.yml -->
-    
-    <link rel="stylesheet" href="/css/style.css">
-    
+
+
+  <script async defer data-website-id="" src=""></script>
+
+  <script defer data-domain="" src=""></script>
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Recording & Rethinking</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">绿厂时光</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
 
 
 
-    <!-- scripts list from _config.yml -->
-    
-    <script src="/js/script.js"></script>
-    
-    <script src="/js/tocbot.min.js"></script>
-    
 
 
 
-    
-    
+
+</div>
         
-    
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
 
+  <aside class="sidebar">
 
-<meta name="generator" content="Hexo 6.3.0"></head>
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
 
-<body>
-    <script>
-        // this function is used to check current theme before page loaded.
-        (() => {
-            const currentTheme = window.localStorage && window.localStorage.getItem('theme') || '';
-            const isDark = currentTheme === 'dark';
-            const pagebody = document.getElementsByTagName('body')[0]
-            if (isDark) {
-                pagebody.classList.add('dark-theme');
-                // mobile
-                document.getElementById("mobile-toggle-theme").innerText = "· Dark"
-            } else {
-                pagebody.classList.remove('dark-theme');
-                // mobile
-                document.getElementById("mobile-toggle-theme").innerText = "· Light"
-            }
-        })();
-    </script>
-
-    <div class="wrapper">
-        <header>
-    <nav class="navbar">
-        <div class="container">
-            <div class="navbar-header header-logo"><a href="/">TIME IN LVIH</a></div>
-            <div class="menu navbar-right">
-                
-                    <a class="menu-item" href="/archives">Posts</a>
-                
-                    <a class="menu-item" href="/tags">Tags</a>
-                
-                <input id="switch_default" type="checkbox" class="switch_default">
-                <label for="switch_default" class="toggleBtn"></label>
-            </div>
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">执行流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C-API-%E5%85%A5%E5%8F%A3"><span class="nav-number">2.</span> <span class="nav-text">任务执行 API 入口</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#LaunchJob-%E7%A4%BA%E4%BE%8B"><span class="nav-number">2.1.</span> <span class="nav-text">LaunchJob 示例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8-LaunchJob"><span class="nav-number">3.</span> <span class="nav-text">启动 LaunchJob</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%84%E5%BB%BA%E5%8D%95%E6%AC%A1%E4%BD%9C%E4%B8%9A"><span class="nav-number">3.1.</span> <span class="nav-text">构建单次作业</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E5%BC%95%E6%93%8E%E4%BF%A1%E6%81%AF"><span class="nav-number">3.2.</span> <span class="nav-text">获取引擎信息</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#linkis-%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%AF%B7%E6%B1%82%E5%88%9B%E5%BB%BAEngineConn"><span class="nav-number">3.2.1.</span> <span class="nav-text">linkis 客户端请求创建EngineConn</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8F%90%E4%BA%A4%E5%88%9B%E5%BB%BA%E5%BC%95%E6%93%8E%E5%90%8E%E5%9B%9E%E8%B0%83"><span class="nav-number">3.2.2.</span> <span class="nav-text">提交创建引擎后回调</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E5%BC%95%E6%93%8E%E4%BF%A1%E6%81%AF-1"><span class="nav-number">4.</span> <span class="nav-text">获取引擎信息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E4%BD%9C%E4%B8%9A%E7%8A%B6%E6%80%81"><span class="nav-number">5.</span> <span class="nav-text">更新作业状态</span></a></li></ol></div>
         </div>
-    </nav>
+        <!--/noindex-->
 
-    
-    <nav class="navbar-mobile" id="nav-mobile">
-        <div class="container">
-            <div class="navbar-header">
-                <div>
-                    <a href="/">TIME IN LVIH</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
-                </div>
-                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
-            </div>
-            <div class="menu" id="mobile-menu">
-                
-                    <a class="menu-item" href="/archives">Posts</a>
-                
-                    <a class="menu-item" href="/tags">Tags</a>
-                
-            </div>
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">smilenceee</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
         </div>
-    </nav>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
 
-</header>
-<script>
-    var mobileBtn = function f() {
-        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
-        var mobileMenu = document.getElementById("mobile-menu");
-        if(toggleMenu.classList.contains("active")){
-           toggleMenu.classList.remove("active")
-            mobileMenu.classList.remove("active")
-        }else{
-            toggleMenu.classList.add("active")
-            mobileMenu.classList.add("active")
-        }
-    }
-</script>
-            <div class="main">
-                <div class="container">
-    
-    
+
+    </header>
 
     
-    <article class="post-wrap">
-        <header class="post-header">
-            <h1 class="post-title">streamis 源码</h1>
-            
-                <div class="post-meta">
-                    
-                        Author: <a itemprop="author" rel="author" href="/">smilenceee</a>
-                    
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
 
-                    
-                        <span class="post-time">
-                        Date: <a href="#">October 30, 2022&nbsp;&nbsp;12:44:10</a>
-                        </span>
-                    
-                    
-                </div>
-            
-        </header>
-
-        <div class="post-content">
-            <h2 id="执行流程"><a href="#执行流程" class="headerlink" title="执行流程"></a>执行流程</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">flowchart TD</span><br><span class="line">构建单次作业 --&gt; 提交创建引擎</span><br><span class="line">提交创建引擎 --&gt; 获取引擎信息</span><br><span class="line">获取引擎信息 --&gt; 更新作业状态</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
 
 
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="default">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2022/10/30/streamis-%E6%BA%90%E7%A0%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="smilenceee">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Recording & Rethinking">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="streamis 源码 | Recording & Rethinking">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          streamis 源码
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-10-30 12:44:10" itemprop="dateCreated datePublished" datetime="2022-10-30T12:44:10+08:00">2022-10-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-11-05 01:09:35" itemprop="dateModified" datetime="2022-11-05T01:09:35+08:00">2022-11-05</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="执行流程"><a href="#执行流程" class="headerlink" title="执行流程"></a>执行流程</h2><pre class="mermaid">flowchart TD
+构建单次作业 --> 提交创建引擎
+提交创建引擎 --> 获取引擎信息
+获取引擎信息 --> 更新作业状态</pre>
 
 <ol>
 <li><p>构建一次性作业</p>
@@ -161,10 +240,71 @@
 <p>类<code>TaskMonitorService</code> 中有个定时任务，从数据库中获取未完成的任务，根据任务的 <code>engineConnId</code>从映射中拿到<code>SubmittableSimpleOnceJob</code>实例，内部会创建一个<code>GetEngineConnAction</code>，有 linkis 客户端发起请求，获取节点信息，里面包含了引擎的状态。</p>
 </li>
 </ol>
-<h2 id="任务执行-API-入口"><a href="#任务执行-API-入口" class="headerlink" title="任务执行 API 入口"></a>任务执行 API 入口</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram</span><br><span class="line">activate JobRestfulApi</span><br><span class="line">JobRestfulApi -&gt;&gt; JobRestfulApi : 判断用户对于作业的权限</span><br><span class="line">JobRestfulApi -&gt;&gt; + TaskService : executeJob()</span><br><span class="line">	TaskService -&gt;&gt; TaskService : 根据 jobId 从表 linkis_stream_job 获取 job</span><br><span class="line">	TaskService -&gt;&gt; TaskService : 根据 jobId 从表 linkis_stream_job_version 获取最新版本 jobVersion</span><br><span class="line">	TaskService -&gt;&gt; TaskService : 创建 task 对象，并保存到表 linkis_stream_task</span><br><span class="line">	Note over TaskService : 找到满足条件的 Builder： &lt;br /&gt; StreamisFlinkTransformJobBuilder &lt;br /&gt;调用 build() 方法</span><br><span class="line">	TaskService -&gt;&gt; + AbstractFlinkStreamisTransformJobBuilder : build()：&lt;br /&gt; 调用符合条件的实现类&lt;br /&gt;将 StreamJob 转成 StreamisTransformJob</span><br><span class="line">	AbstractFlinkStreamisTransformJobBuilder -&gt;&gt; AbstractFlinkStreamisTransformJobBuilder : 通过 configurationService 获取任务配置&lt;br/&gt;内部按照不同类型将配置分类&lt;br/&gt; 通过 streamJobMapper 获取版本</span><br><span class="line">	Note over FlinkSQLJobContentParser : 不同版本的作业，作业内容可能不一样</span><br><span class="line">	AbstractFlinkStreamisTransformJobBuilder -&gt;&gt; + FlinkSQLJobContentParser : parseTo()：从作业版本中获取作业内容</span><br><span class="line">	Note over FlinkSQLJobContentParser : 根据任务类型获取作业内容 &lt;br /&gt; 1. file 类型调用 getFileContent(...) &lt;br /&gt; 2. bml 类型调用  readFileFromBML(...) 3. sql 类型直接返回 sql 字符串</span><br><span class="line">	FlinkSQLJobContentParser --&gt;&gt; - AbstractFlinkStreamisTransformJobBuilder : 返回 StreamisSqlTransformJobContent 对象&lt;br /&gt;封装了任务内容（需要执行的 SQL）</span><br><span class="line">	AbstractFlinkStreamisTransformJobBuilder -&gt;&gt; AbstractFlinkStreamisTransformJobBuilder : 设置 engineConn 类型（flink-1.12.2）和运行类型（sql）</span><br><span class="line">	AbstractFlinkStreamisTransformJobBuilder --&gt;&gt; - TaskService : 返回 transformJob</span><br><span class="line">	Note over TaskService : 接下来，将 transformJob 转成 launchJob</span><br><span class="line">	TaskService -&gt;&gt; + Transform : transform() </span><br><span class="line">	Note over TaskService, Transform : 这里调用了一个 foldLeft 方法，&lt;br /&gt;效果是从数组的最后一个 Transform 依次作用在 transformJob 上面，&lt;br /&gt;并将结果作为下次 transform 的输入。</span><br><span class="line">	Transform --&gt;&gt; - TaskService : 返回 launchJob</span><br><span class="line"></span><br><span class="line">	Note over TaskService : 接下来通过 linkisJobManager 启动 launchJob&lt;br /&gt;&lt;br /&gt;通过反射获取 LinkisJobManager 接口的实现类，&lt;br /&gt;接口中有个 getName 方法。&lt;br /&gt;内部会构建一个 name -&gt; 实现类的映射。&lt;br /&gt; 这里根据 name=simpleFlink 获取到的实现类是 SimpleFlinkJobManager</span><br><span class="line">	</span><br><span class="line">	Note over TaskService : 具体见“启动LaunchJob”</span><br><span class="line"></span><br><span class="line">TaskService --&gt;&gt; - JobRestfulApi : 执行结束返回</span><br><span class="line">note over JobRestfulApi : 返回成功消息</span><br><span class="line">deactivate JobRestfulApi</span><br><span class="line">    </span><br></pre></td></tr></table></figure>
+<h2 id="任务执行-API-入口"><a href="#任务执行-API-入口" class="headerlink" title="任务执行 API 入口"></a>任务执行 API 入口</h2><pre class="mermaid">sequenceDiagram
+activate JobRestfulApi
+JobRestfulApi ->> JobRestfulApi : 判断用户对于作业的权限
+JobRestfulApi ->> + TaskService : executeJob()
+    TaskService ->> TaskService : 根据 jobId 从表 linkis_stream_job 获取 job
+    TaskService ->> TaskService : 根据 jobId 从表 linkis_stream_job_version 获取最新版本 jobVersion
+    TaskService ->> TaskService : 创建 task 对象，并保存到表 linkis_stream_task
+    Note over TaskService : 找到满足条件的 Builder： <br /> StreamisFlinkTransformJobBuilder <br />调用 build() 方法
+    TaskService ->> + AbstractFlinkStreamisTransformJobBuilder : build()：<br /> 调用符合条件的实现类<br />将 StreamJob 转成 StreamisTransformJob
+    AbstractFlinkStreamisTransformJobBuilder ->> AbstractFlinkStreamisTransformJobBuilder : 通过 configurationService 获取任务配置<br/>内部按照不同类型将配置分类<br/> 通过 streamJobMapper 获取版本
+    Note over FlinkSQLJobContentParser : 不同版本的作业，作业内容可能不一样
+    AbstractFlinkStreamisTransformJobBuilder ->> + FlinkSQLJobContentParser : parseTo()：从作业版本中获取作业内容
+    Note over FlinkSQLJobContentParser : 根据任务类型获取作业内容 <br /> 1. file 类型调用 getFileContent(...) <br /> 2. bml 类型调用  readFileFromBML(...) 3. sql 类型直接返回 sql 字符串
+    FlinkSQLJobContentParser -->> - AbstractFlinkStreamisTransformJobBuilder : 返回 StreamisSqlTransformJobContent 对象<br />封装了任务内容（需要执行的 SQL）
+    AbstractFlinkStreamisTransformJobBuilder ->> AbstractFlinkStreamisTransformJobBuilder : 设置 engineConn 类型（flink-1.12.2）和运行类型（sql）
+    AbstractFlinkStreamisTransformJobBuilder -->> - TaskService : 返回 transformJob
+    Note over TaskService : 接下来，将 transformJob 转成 launchJob
+    TaskService ->> + Transform : transform() 
+    Note over TaskService, Transform : 这里调用了一个 foldLeft 方法，<br />效果是从数组的最后一个 Transform 依次作用在 transformJob 上面，<br />并将结果作为下次 transform 的输入。
+    Transform -->> - TaskService : 返回 launchJob
+
+    Note over TaskService : 接下来通过 linkisJobManager 启动 launchJob<br /><br />通过反射获取 LinkisJobManager 接口的实现类，<br />接口中有个 getName 方法。<br />内部会构建一个 name -> 实现类的映射。<br /> 这里根据 name=simpleFlink 获取到的实现类是 SimpleFlinkJobManager
+    
+    Note over TaskService : 具体见“启动LaunchJob”
+
+TaskService -->> - JobRestfulApi : 执行结束返回
+note over JobRestfulApi : 返回成功消息
+deactivate JobRestfulApi</pre>
 
 <p>Transform 的作用是给 launchJob 添加 labels、source、作业配置、launchConfig。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">classDiagram</span><br><span class="line">class Transform &#123;</span><br><span class="line">&lt;&lt;interface&gt;&gt;</span><br><span class="line">+ transform(...)</span><br><span class="line">&#125;</span><br><span class="line">Transform&lt;|..StreamisJobContentTransform</span><br><span class="line">Transform&lt;|..ConfigTransform</span><br><span class="line">Transform&lt;|..LabelsStreamisCodeTransform</span><br><span class="line">Transform&lt;|..SourceTransform</span><br><span class="line">Transform&lt;|..FlinkJarStreamisStartupParamsTransform</span><br><span class="line">Transform&lt;|..LaunchConfigTransform</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">class StreamisJobContentTransform &#123;</span><br><span class="line">&lt;&lt;interface&gt;&gt;</span><br><span class="line">+ transform(...)</span><br><span class="line">+ transformJobContent(...)</span><br><span class="line">&#125;</span><br><span class="line">StreamisJobContentTransform&lt;|..SqlStreamisJobContentTransform</span><br><span class="line">StreamisJobContentTransform&lt;|..FlinkJarStreamisJobContentTransform</span><br><span class="line"></span><br><span class="line">class ConfigTransform &#123;</span><br><span class="line">&lt;&lt;interface&gt;&gt;</span><br><span class="line">+ transform(...)</span><br><span class="line">+ transform(...)</span><br><span class="line">&#125;</span><br><span class="line">ConfigTransform&lt;|..FlinkCheckpointConfigTransform</span><br><span class="line">ConfigTransform&lt;|..ResourceConfigTransform</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">class ResourceConfigTransform&#123;</span><br><span class="line">+ transform(...)</span><br><span class="line">&#125;</span><br><span class="line">ResourceConfigTransform&lt;|..ExtraConfigTransform</span><br></pre></td></tr></table></figure>
+<pre class="mermaid">classDiagram
+class Transform {
+<<interface>>
++ transform(...)
+}
+Transform<|..StreamisJobContentTransform
+Transform<|..ConfigTransform
+Transform<|..LabelsStreamisCodeTransform
+Transform<|..SourceTransform
+Transform<|..FlinkJarStreamisStartupParamsTransform
+Transform<|..LaunchConfigTransform
+
+
+
+class StreamisJobContentTransform {
+<<interface>>
++ transform(...)
++ transformJobContent(...)
+}
+StreamisJobContentTransform<|..SqlStreamisJobContentTransform
+StreamisJobContentTransform<|..FlinkJarStreamisJobContentTransform
+
+class ConfigTransform {
+<<interface>>
++ transform(...)
++ transform(...)
+}
+ConfigTransform<|..FlinkCheckpointConfigTransform
+ConfigTransform<|..ResourceConfigTransform
+
+
+class ResourceConfigTransform{
++ transform(...)
+}
+ResourceConfigTransform<|..ExtraConfigTransform</pre>
 
 
 
@@ -177,13 +317,81 @@
 <p><code>com.webank.wedatasphere.streamis.jobmanager.launcher.linkis.manager.FlinkJobManager#launch</code></p>
 <figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">launch</span></span>(job: <span class="type">LaunchJob</span>): <span class="type">String</span> = &#123;</span><br><span class="line">    job.getLabels.get(<span class="type">LabelKeyUtils</span>.<span class="type">ENGINE_TYPE_LABEL_KEY</span>) <span class="keyword">match</span> &#123;</span><br><span class="line">        <span class="keyword">case</span> engineConnType: <span class="type">String</span> =&gt;</span><br><span class="line">        <span class="keyword">if</span>(!engineConnType.toLowerCase.startsWith(<span class="type">FlinkJobManager</span>.<span class="type">FLINK_ENGINE_CONN_TYPE</span>))</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">FlinkJobLaunchErrorException</span>(<span class="number">30401</span>, <span class="string">s&quot;Only <span class="subst">$&#123;FlinkJobManager.FLINK_ENGINE_CONN_TYPE&#125;</span> job is supported to be launched to Linkis, but <span class="subst">$engineConnType</span> is found.&quot;</span>)</span><br><span class="line">        <span class="keyword">case</span> _ =&gt; <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">FlinkJobLaunchErrorException</span>(<span class="number">30401</span>, <span class="string">s&quot;Not exists <span class="subst">$&#123;LabelKeyUtils.ENGINE_TYPE_LABEL_KEY&#125;</span>, StreamisJob cannot be submitted to Linkis successfully.&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">val</span> onceJob = buildOnceJob(job)</span><br><span class="line">    onceJob.submit()</span><br><span class="line">    onceJobs synchronized onceJobs.put(onceJob.getId, onceJob)</span><br><span class="line">    <span class="keyword">val</span> linkisJobInfo = <span class="type">Utils</span>.tryCatch(createJobInfo(onceJob, job))&#123; t =&gt;</span><br><span class="line">        error(<span class="string">s&quot;<span class="subst">$&#123;job.getSubmitUser&#125;</span> create jobInfo failed, now stop this EngineConn <span class="subst">$&#123;onceJob.getId&#125;</span>.&quot;</span>)</span><br><span class="line">        stop(onceJob)</span><br><span class="line">        <span class="keyword">throw</span> t</span><br><span class="line">    &#125;</span><br><span class="line">    onceJobs synchronized onceJobIdToJobInfo.put(onceJob.getId, linkisJobInfo)</span><br><span class="line">    onceJob.getId</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h3 id="构建单次作业"><a href="#构建单次作业" class="headerlink" title="构建单次作业"></a>构建单次作业</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram</span><br><span class="line">activate TaskService</span><br><span class="line">TaskService -&gt;&gt; + FlinkJobManager : launch()</span><br><span class="line">	</span><br><span class="line">	FlinkJobManager -&gt;&gt; FlinkJobManager : 判断标签 engineType 是否 flink 开头</span><br><span class="line">	FlinkJobManager -&gt;&gt; + SimpleFlinkJobManager : buildOnceJob()：&lt;br /&gt;构建单次作业</span><br><span class="line">		</span><br><span class="line">			SimpleFlinkJobManager  -&gt;&gt; SimpleFlinkJobManager : 初始化 SimpleOnceJobBuilder 对象</span><br><span class="line">			rect rgb(121, 216, 206)</span><br><span class="line">			SimpleFlinkJobManager -&gt;&gt; + SimpleOnceJobBuilder : build()</span><br><span class="line">				SimpleOnceJobBuilder -&gt;&gt; SimpleOnceJobBuilder :  &lt;br /&gt; 1. 校验 labels/jobContent 是否为空 &lt;br /&gt; 2. 设置 params/source &lt;br /&gt; 3. 配置启动参数 &lt;br /&gt; 4. TODO 还有些细节要看下</span><br><span class="line">				activate SimpleOnceJobBuilder</span><br><span class="line">					Note right of SimpleOnceJobBuilder : 调用方法 getOnceExecutorContent()</span><br><span class="line">					SimpleOnceJobBuilder -&gt;&gt; SimpleOnceJobBuilder : 构建 OnceExecutorContent 对象，并初始化</span><br><span class="line">					SimpleOnceJobBuilder -&gt;&gt; + OnceExecutorContentUtils : contentToMap() ：&lt;br /&gt;将 onceExecutorContent &lt;br /&gt; 转成 contentMap</span><br><span class="line">					OnceExecutorContentUtils --&gt;&gt; - SimpleOnceJobBuilder : 返回 contentMap</span><br><span class="line">					SimpleOnceJobBuilder -&gt;&gt; + HttpBmlClient : uploadResource()：&lt;br /&gt; json 序列化 contentMap 对象上传</span><br><span class="line">					HttpBmlClient --&gt;&gt; - SimpleOnceJobBuilder : 返回响应 response 包含资源 ID 和版本</span><br><span class="line">					SimpleOnceJobBuilder -&gt;&gt; SimpleOnceJobBuilder : 将 response 封装成 BmlResource </span><br><span class="line">					SimpleOnceJobBuilder -&gt;&gt; + OnceExecutorContentUtils :　resourceToValue() ： &lt;br /&gt;将 BmlResource 转成资源 ID</span><br><span class="line">					OnceExecutorContentUtils --&gt;&gt; - SimpleOnceJobBuilder : 返回资源 ID</span><br><span class="line">				deactivate SimpleOnceJobBuilder</span><br><span class="line">				SimpleOnceJobBuilder -&gt;&gt; SimpleOnceJobBuilder : 初始化 CreateEngineConnAction.Builder 对象</span><br><span class="line">				SimpleOnceJobBuilder -&gt;&gt; + CreateEngineConnAction.Builder :　build()</span><br><span class="line">				CreateEngineConnAction.Builder --&gt;&gt; - SimpleOnceJobBuilder : 返回对象 createEngineConnAction</span><br><span class="line">				SimpleOnceJobBuilder -&gt;&gt; SimpleOnceJobBuilder : 封装一个 SubmittableSimpleOnceJob 实例</span><br><span class="line">				Note over SimpleOnceJobBuilder : 这个实例中包含有 linkisClient，以及 createEngineConnAction&lt;br/&gt; linkisCLient 内部有个成员 dwsHttpClient 后续与 linkis 接口的交互通过它执行</span><br><span class="line">			SimpleOnceJobBuilder --&gt;&gt; - SimpleFlinkJobManager : 返回实例</span><br><span class="line">			end</span><br><span class="line">	SimpleFlinkJobManager --&gt;&gt; - FlinkJobManager : 返回实例 onceJob</span><br><span class="line">	</span><br><span class="line">	Note over FlinkJobManager : 执行 onceJob.submit() 方法&lt;br /&gt;具体见“提交创建引擎”</span><br><span class="line">	FlinkJobManager --&gt;&gt; - TaskService : 返回 linkisJobId</span><br><span class="line">deactivate TaskService</span><br></pre></td></tr></table></figure>
+<h3 id="构建单次作业"><a href="#构建单次作业" class="headerlink" title="构建单次作业"></a>构建单次作业</h3><pre class="mermaid">sequenceDiagram
+activate TaskService
+TaskService ->> + FlinkJobManager : launch()
+    
+    FlinkJobManager ->> FlinkJobManager : 判断标签 engineType 是否 flink 开头
+    FlinkJobManager ->> + SimpleFlinkJobManager : buildOnceJob()：<br />构建单次作业
+        
+            SimpleFlinkJobManager  ->> SimpleFlinkJobManager : 初始化 SimpleOnceJobBuilder 对象
+            rect rgb(121, 216, 206)
+            SimpleFlinkJobManager ->> + SimpleOnceJobBuilder : build()
+                SimpleOnceJobBuilder ->> SimpleOnceJobBuilder :  <br /> 1. 校验 labels/jobContent 是否为空 <br /> 2. 设置 params/source <br /> 3. 配置启动参数 <br /> 4. TODO 还有些细节要看下
+                activate SimpleOnceJobBuilder
+                    Note right of SimpleOnceJobBuilder : 调用方法 getOnceExecutorContent()
+                    SimpleOnceJobBuilder ->> SimpleOnceJobBuilder : 构建 OnceExecutorContent 对象，并初始化
+                    SimpleOnceJobBuilder ->> + OnceExecutorContentUtils : contentToMap() ：<br />将 onceExecutorContent <br /> 转成 contentMap
+                    OnceExecutorContentUtils -->> - SimpleOnceJobBuilder : 返回 contentMap
+                    SimpleOnceJobBuilder ->> + HttpBmlClient : uploadResource()：<br /> json 序列化 contentMap 对象上传
+                    HttpBmlClient -->> - SimpleOnceJobBuilder : 返回响应 response 包含资源 ID 和版本
+                    SimpleOnceJobBuilder ->> SimpleOnceJobBuilder : 将 response 封装成 BmlResource 
+                    SimpleOnceJobBuilder ->> + OnceExecutorContentUtils :　resourceToValue() ： <br />将 BmlResource 转成资源 ID
+                    OnceExecutorContentUtils -->> - SimpleOnceJobBuilder : 返回资源 ID
+                deactivate SimpleOnceJobBuilder
+                SimpleOnceJobBuilder ->> SimpleOnceJobBuilder : 初始化 CreateEngineConnAction.Builder 对象
+                SimpleOnceJobBuilder ->> + CreateEngineConnAction.Builder :　build()
+                CreateEngineConnAction.Builder -->> - SimpleOnceJobBuilder : 返回对象 createEngineConnAction
+                SimpleOnceJobBuilder ->> SimpleOnceJobBuilder : 封装一个 SubmittableSimpleOnceJob 实例
+                Note over SimpleOnceJobBuilder : 这个实例中包含有 linkisClient，以及 createEngineConnAction<br/> linkisCLient 内部有个成员 dwsHttpClient 后续与 linkis 接口的交互通过它执行
+            SimpleOnceJobBuilder -->> - SimpleFlinkJobManager : 返回实例
+            end
+    SimpleFlinkJobManager -->> - FlinkJobManager : 返回实例 onceJob
+    
+    Note over FlinkJobManager : 执行 onceJob.submit() 方法<br />具体见“提交创建引擎”
+    FlinkJobManager -->> - TaskService : 返回 linkisJobId
+deactivate TaskService</pre>
 
 <p>createEngineConnAction.getRequestPayload</p>
 <figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;createService&quot;</span><span class="punctuation">:</span> <span class="string">&quot;ServiceInstance(streamis-server, 10-177-198-114.ostream-test.dgtest01:9400)&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;ignoreTimeout&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">true</span></span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;description&quot;</span><span class="punctuation">:</span> <span class="string">&quot;demo for streamis&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;properties&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;wds.linkis.flink.taskmanager.num&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;wds.linkis.flink.jobmanager.cpus&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;wds.linkis.flink.taskmanager.memory&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;wds.linkis.flink.taskManager.cpus&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;wds.linkis.flink.custom&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;label.codeType&quot;</span><span class="punctuation">:</span> <span class="string">&quot;sql&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;wds.linkis.flink.jobmanager.memory&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;onceExecutorContent&quot;</span><span class="punctuation">:</span> <span class="string">&quot;resource_036360c3c48-fc89-4a86-bafc-b21a9af830eav000001&quot;</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;labels&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;userCreator&quot;</span><span class="punctuation">:</span> <span class="string">&quot;hadoop-Streamis&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;engineType&quot;</span><span class="punctuation">:</span> <span class="string">&quot;flink-1.12.2&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;engineConnMode&quot;</span><span class="punctuation">:</span> <span class="string">&quot;once&quot;</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;timeOut&quot;</span><span class="punctuation">:</span> <span class="number">300000</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
 
 <p>接下来，会将上面的 SubmittableSimpleOnceJob 通过 linkis 客户端提交给 linkis，linkis 则会创建一个 EngineConn。</p>
-<h3 id="获取引擎信息"><a href="#获取引擎信息" class="headerlink" title="获取引擎信息"></a>获取引擎信息</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram</span><br><span class="line">activate FlinkJobManager</span><br><span class="line">	FlinkJobManager -&gt;&gt; + AbstractSubmittableLinkisJob : submit() 提交 onceJob</span><br><span class="line">	AbstractSubmittableLinkisJob -&gt;&gt; + SubmittableSimpleOnceJob : doSubmit()</span><br><span class="line">	Note over AbstractSubmittableLinkisJob : 这里与之前创建的 SubmittableSimpleOnceJob 对上了</span><br><span class="line">	SubmittableSimpleOnceJob -&gt;&gt; + LinkisManagerClientImpl : createEngineConn()</span><br><span class="line">	Note over LinkisManagerClientImpl : 这个方法内部会发起 http 请求 linkis 接口&lt;br /&gt; 返回一个 CreateEngineConnResult 实例</span><br><span class="line">	LinkisManagerClientImpl --&gt;&gt; - SubmittableSimpleOnceJob : 返回 nodeInfo</span><br><span class="line">    SubmittableSimpleOnceJob -&gt;&gt; SubmittableSimpleOnceJob : 从 nodeInfo 中获取 serviceInstance、ticketId、ecmServiceInstance、lastEngineConnState</span><br><span class="line">    SubmittableSimpleOnceJob -&gt;&gt; SimpleOnceJob :　initOnceOperatorActions()：在数组 operatorActions 中添加一个 action&lt;br /&gt; 这个 action 给 OnceJobOperator 设置 user/ticketId/serviceInstance/linkisManagerClient</span><br><span class="line"> </span><br><span class="line">    Note over SimpleOnceJob : TODO action 的作用</span><br><span class="line">    rect rgb(100, 118, 135)</span><br><span class="line">    alt 调用方法 isCompleted 判断状态 lastEngineConnState 未完成 且 未启动</span><br><span class="line">    Note over SimpleOnceJob : isCompleted() 方法中在对于 engineConn 结束和运行&lt;br/&gt;分别回调 onJobFlinished / onJobRunning</span><br><span class="line">    rect rgb(255, 230, 204)</span><br><span class="line">    loop 状态 未完成 且 未启动</span><br><span class="line">    SubmittableSimpleOnceJob -&gt;&gt; + SimpleOnceJob :　isCompleted</span><br><span class="line">    SimpleOnceJob -&gt;&gt; + OnceJob : getNodeInfo() ：通过 linkis 客户端获取 &lt;br/&gt;ServiceInstance 对应的 EngineConn 信息</span><br><span class="line">    OnceJob --&gt;&gt; - SimpleOnceJob : 返回 EngineConnNode</span><br><span class="line">    SimpleOnceJob --&gt;&gt; - SubmittableSimpleOnceJob : 从 EngineConnNode 获取状态，返回 isCompleted() 结果作为状态</span><br><span class="line">    end</span><br><span class="line">    end</span><br><span class="line">    SubmittableSimpleOnceJob -&gt;&gt; + SimpleOnceJob :　transformToId()</span><br><span class="line">    SimpleOnceJob --&gt;&gt; - SubmittableSimpleOnceJob : 设置 engineConnId</span><br><span class="line">    else</span><br><span class="line">    SubmittableSimpleOnceJob -&gt;&gt; + SimpleOnceJob :　transformToId()</span><br><span class="line">    SimpleOnceJob --&gt;&gt; - SubmittableSimpleOnceJob : 设置 engineConnId</span><br><span class="line">    end</span><br><span class="line">    end</span><br><span class="line">    SubmittableSimpleOnceJob --&gt;&gt; - AbstractSubmittableLinkisJob : 无返回值</span><br><span class="line">    Note over AbstractSubmittableLinkisJob : 具体见“提交创建引擎后回调”</span><br><span class="line">    AbstractSubmittableLinkisJob --&gt;&gt; - FlinkJobManager : 无返回值</span><br><span class="line">    FlinkJobManager -&gt;&gt; FlinkJobManager : 以 engineConnId 作为 key&lt;br/&gt;onceJob 作为 value&lt;br/&gt;放到缓存 onceJobs 中</span><br><span class="line">    Note over FlinkJobManager : 具体见“通知引擎执行作业”</span><br><span class="line">deactivate FlinkJobManager</span><br></pre></td></tr></table></figure>
+<h3 id="获取引擎信息"><a href="#获取引擎信息" class="headerlink" title="获取引擎信息"></a>获取引擎信息</h3><pre class="mermaid">sequenceDiagram
+activate FlinkJobManager
+    FlinkJobManager ->> + AbstractSubmittableLinkisJob : submit() 提交 onceJob
+    AbstractSubmittableLinkisJob ->> + SubmittableSimpleOnceJob : doSubmit()
+    Note over AbstractSubmittableLinkisJob : 这里与之前创建的 SubmittableSimpleOnceJob 对上了
+    SubmittableSimpleOnceJob ->> + LinkisManagerClientImpl : createEngineConn()
+    Note over LinkisManagerClientImpl : 这个方法内部会发起 http 请求 linkis 接口<br /> 返回一个 CreateEngineConnResult 实例
+    LinkisManagerClientImpl -->> - SubmittableSimpleOnceJob : 返回 nodeInfo
+    SubmittableSimpleOnceJob ->> SubmittableSimpleOnceJob : 从 nodeInfo 中获取 serviceInstance、ticketId、ecmServiceInstance、lastEngineConnState
+    SubmittableSimpleOnceJob ->> SimpleOnceJob :　initOnceOperatorActions()：在数组 operatorActions 中添加一个 action<br /> 这个 action 给 OnceJobOperator 设置 user/ticketId/serviceInstance/linkisManagerClient
+ 
+    Note over SimpleOnceJob : TODO action 的作用
+    rect rgb(100, 118, 135)
+    alt 调用方法 isCompleted 判断状态 lastEngineConnState 未完成 且 未启动
+    Note over SimpleOnceJob : isCompleted() 方法中在对于 engineConn 结束和运行<br/>分别回调 onJobFlinished / onJobRunning
+    rect rgb(255, 230, 204)
+    loop 状态 未完成 且 未启动
+    SubmittableSimpleOnceJob ->> + SimpleOnceJob :　isCompleted
+    SimpleOnceJob ->> + OnceJob : getNodeInfo() ：通过 linkis 客户端获取 <br/>ServiceInstance 对应的 EngineConn 信息
+    OnceJob -->> - SimpleOnceJob : 返回 EngineConnNode
+    SimpleOnceJob -->> - SubmittableSimpleOnceJob : 从 EngineConnNode 获取状态，返回 isCompleted() 结果作为状态
+    end
+    end
+    SubmittableSimpleOnceJob ->> + SimpleOnceJob :　transformToId()
+    SimpleOnceJob -->> - SubmittableSimpleOnceJob : 设置 engineConnId
+    else
+    SubmittableSimpleOnceJob ->> + SimpleOnceJob :　transformToId()
+    SimpleOnceJob -->> - SubmittableSimpleOnceJob : 设置 engineConnId
+    end
+    end
+    SubmittableSimpleOnceJob -->> - AbstractSubmittableLinkisJob : 无返回值
+    Note over AbstractSubmittableLinkisJob : 具体见“提交创建引擎后回调”
+    AbstractSubmittableLinkisJob -->> - FlinkJobManager : 无返回值
+    FlinkJobManager ->> FlinkJobManager : 以 engineConnId 作为 key<br/>onceJob 作为 value<br/>放到缓存 onceJobs 中
+    Note over FlinkJobManager : 具体见“通知引擎执行作业”
+deactivate FlinkJobManager</pre>
 
 <p>这里逻辑就是通过 linkis 客户端向 linkis 发送一个 <code>createEngineConnAction</code> 用于创建一个 <code>engineConn</code>，然后一直等待直到这个 <code>engineConn</code> 结束或者 运行起来。</p>
 <p>这里请求的 linkis 接口地址中路径是 <code>linkisManager/createEngineConn</code>，对应的执行逻辑入口是 <code>org.apache.linkis.manager.am.restful.EngineRestfulApi#createEngineConn</code></p>
@@ -221,72 +429,147 @@
 <li><p>响应类型，是根据请求的 url 来确定：在响应对象上定义了一个注解，注解值是对应的请求 url，通过反射获取到 url 和 响应类的映射关系后，从映射关系中获取响应类型。例如，</p>
 <figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@DWSHttpMessageResult</span>(<span class="string">&quot;/api/rest_j/v\\d+/linkisManager/createEngineConn&quot;</span>)</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CreateEngineConnResult</span> <span class="keyword">extends</span> <span class="title">GetEngineConnResult</span></span></span><br></pre></td></tr></table></figure></li>
 </ol>
-<h4 id="提交创建引擎后回调"><a href="#提交创建引擎后回调" class="headerlink" title="提交创建引擎后回调"></a>提交创建引擎后回调</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram </span><br><span class="line">activate AbstractSubmittableLinkisJob</span><br><span class="line">	AbstractSubmittableLinkisJob -&gt;&gt; + LinkisJobMetrics : </span><br><span class="line">	Note over TaskService, LinkisJobMetrics : 创建 LinkisJobMetrics 对象， &lt;br/&gt;参数是上面创建的 engineConnId</span><br><span class="line">	LinkisJobMetrics --&gt;&gt; - AbstractSubmittableLinkisJob : 返回 jobMetrics</span><br><span class="line">	AbstractSubmittableLinkisJob -&gt;&gt; + AbstractLinkisJob : getJobListeners()：获取作业监听器</span><br><span class="line">	Note over AbstractLinkisJob : 这里的监听器应该是空的&lt;br /&gt; 方法 addJobListener 貌似没有被调用</span><br><span class="line">	AbstractLinkisJob --&gt;&gt; - AbstractSubmittableLinkisJob : 返回监听器 </span><br><span class="line">	Note over AbstractSubmittableLinkisJob : 调用监听器的 onJobSubmitted 方法</span><br><span class="line">deactivate AbstractSubmittableLinkisJob </span><br></pre></td></tr></table></figure>
+<h4 id="提交创建引擎后回调"><a href="#提交创建引擎后回调" class="headerlink" title="提交创建引擎后回调"></a>提交创建引擎后回调</h4><pre class="mermaid">sequenceDiagram 
+activate AbstractSubmittableLinkisJob
+    AbstractSubmittableLinkisJob ->> + LinkisJobMetrics : 
+    Note over TaskService, LinkisJobMetrics : 创建 LinkisJobMetrics 对象， <br/>参数是上面创建的 engineConnId
+    LinkisJobMetrics -->> - AbstractSubmittableLinkisJob : 返回 jobMetrics
+    AbstractSubmittableLinkisJob ->> + AbstractLinkisJob : getJobListeners()：获取作业监听器
+    Note over AbstractLinkisJob : 这里的监听器应该是空的<br /> 方法 addJobListener 貌似没有被调用
+    AbstractLinkisJob -->> - AbstractSubmittableLinkisJob : 返回监听器 
+    Note over AbstractSubmittableLinkisJob : 调用监听器的 onJobSubmitted 方法
+deactivate AbstractSubmittableLinkisJob</pre>
 
-<h2 id="获取引擎信息-1"><a href="#获取引擎信息-1" class="headerlink" title="获取引擎信息"></a>获取引擎信息</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram</span><br><span class="line">activate FlinkJobManager</span><br><span class="line">	FlinkJobManager -&gt;&gt; FlinkJobManager : 将 onceJob 保存到缓存 onceJobs 中</span><br><span class="line">	FlinkJobManager -&gt;&gt; + SimpleFlinkJobManager : createJobInfo()</span><br><span class="line">	</span><br><span class="line">	SimpleFlinkJobManager -&gt;&gt; + OnceJob : getNodeInfo : 获取 engineConn 信息</span><br><span class="line">	OnceJob --&gt;&gt; - SimpleFlinkJobManager : 返回 nodeInfo</span><br><span class="line">	SimpleFlinkJobManager -&gt;&gt; SimpleFlinkJobManager : 创建一个 FlinkJobInfo 对象 jobInfo</span><br><span class="line">	</span><br><span class="line">	activate SimpleFlinkJobManager</span><br><span class="line">	Note right of SimpleFlinkJobManager : 调用方法 fatchApplicationInfo() &lt;br/&gt; 获取 yarn 作业信息 </span><br><span class="line">	Note right of SimpleFlinkJobManager : 根据 operator 名字获取 operator&lt;br/&gt; EngineConnApplicationInfoOperator</span><br><span class="line">	Note right of SimpleFlinkJobManager : 将前面设置的 action 依次作用到&lt;br/&gt;EngineConnApplicationInfoOperator</span><br><span class="line">	rect rgb(121, 216, 206)</span><br><span class="line">	loop 可以重试</span><br><span class="line">	SimpleFlinkJobManager -&gt;&gt; + OnceJobOperator : apply()</span><br><span class="line">	OnceJobOperator -&gt;&gt; OnceJobOperator : 构建 EngineConnOperateAction.Builder 对象</span><br><span class="line">	Note over OnceJobOperator : 从这个 builder 的类型&lt;br/&gt;可以看出它是用来构建 EngineConn 执行操作的构建器</span><br><span class="line">	OnceJobOperator -&gt;&gt; + EngineConnOperateAction.Builder : build()</span><br><span class="line">	EngineConnOperateAction.Builder --&gt;&gt; - OnceJobOperator : 返回 EngineConnOperateAction 实例 &lt;br /&gt; engineConnOperateAction</span><br><span class="line">	</span><br><span class="line">	OnceJobOperator -&gt;&gt; + LinkisManagerClientImpl : executeEngineConnOperation()</span><br><span class="line">	Note over LinkisManagerClientImpl : 通过 linkis 客户端，提交 engineConnOperateAction &lt;br/&gt; 这里引擎开始执行任务</span><br><span class="line">	LinkisManagerClientImpl --&gt;&gt; - OnceJobOperator : 返回执行结果 result，结果对象中有 applicationId，applicationUrl</span><br><span class="line">	</span><br><span class="line">	OnceJobOperator -&gt;&gt; + EngineConnApplicationInfoOperator : resultToObject()：将返回的结果 result 转成 ApplicationInfo</span><br><span class="line">	EngineConnApplicationInfoOperator --&gt;&gt; - OnceJobOperator : 返回 ApplicationInfo 对象（包含：applicationId、applicationUrl、queue）</span><br><span class="line">	</span><br><span class="line">	OnceJobOperator --&gt;&gt; - SimpleFlinkJobManager :返回 applicationInfo 对象</span><br><span class="line">	end</span><br><span class="line">	end</span><br><span class="line">	SimpleFlinkJobManager -&gt;&gt; SimpleFlinkJobManager : 从 applicationInfo 对象中获取 &lt;br/&gt;applcaitionId,applicationUrl 设置 jobInfo</span><br><span class="line">	deactivate SimpleFlinkJobManager</span><br><span class="line">	SimpleFlinkJobManager -&gt;&gt; SimpleFlinkJobManager : jobInfo 设置 resource</span><br><span class="line">	SimpleFlinkJobManager --&gt;&gt; - FlinkJobManager : 返回 jobInfo</span><br><span class="line">	</span><br><span class="line">	FlinkJobManager -&gt;&gt; FlinkJobManager : 存放到缓存 onceJobIdToJobInfo &lt;br /&gt; 返回 engineConnId</span><br><span class="line">deactivate FlinkJobManager</span><br></pre></td></tr></table></figure>
+<h2 id="获取引擎信息-1"><a href="#获取引擎信息-1" class="headerlink" title="获取引擎信息"></a>获取引擎信息</h2><pre class="mermaid">sequenceDiagram
+activate FlinkJobManager
+    FlinkJobManager ->> FlinkJobManager : 将 onceJob 保存到缓存 onceJobs 中
+    FlinkJobManager ->> + SimpleFlinkJobManager : createJobInfo()
+    
+    SimpleFlinkJobManager ->> + OnceJob : getNodeInfo : 获取 engineConn 信息
+    OnceJob -->> - SimpleFlinkJobManager : 返回 nodeInfo
+    SimpleFlinkJobManager ->> SimpleFlinkJobManager : 创建一个 FlinkJobInfo 对象 jobInfo
+    
+    activate SimpleFlinkJobManager
+    Note right of SimpleFlinkJobManager : 调用方法 fatchApplicationInfo() <br/> 获取 yarn 作业信息 
+    Note right of SimpleFlinkJobManager : 根据 operator 名字获取 operator<br/> EngineConnApplicationInfoOperator
+    Note right of SimpleFlinkJobManager : 将前面设置的 action 依次作用到<br/>EngineConnApplicationInfoOperator
+    rect rgb(121, 216, 206)
+    loop 可以重试
+    SimpleFlinkJobManager ->> + OnceJobOperator : apply()
+    OnceJobOperator ->> OnceJobOperator : 构建 EngineConnOperateAction.Builder 对象
+    Note over OnceJobOperator : 从这个 builder 的类型<br/>可以看出它是用来构建 EngineConn 执行操作的构建器
+    OnceJobOperator ->> + EngineConnOperateAction.Builder : build()
+    EngineConnOperateAction.Builder -->> - OnceJobOperator : 返回 EngineConnOperateAction 实例 <br /> engineConnOperateAction
+    
+    OnceJobOperator ->> + LinkisManagerClientImpl : executeEngineConnOperation()
+    Note over LinkisManagerClientImpl : 通过 linkis 客户端，提交 engineConnOperateAction <br/> 这里引擎开始执行任务
+    LinkisManagerClientImpl -->> - OnceJobOperator : 返回执行结果 result，结果对象中有 applicationId，applicationUrl
+    
+    OnceJobOperator ->> + EngineConnApplicationInfoOperator : resultToObject()：将返回的结果 result 转成 ApplicationInfo
+    EngineConnApplicationInfoOperator -->> - OnceJobOperator : 返回 ApplicationInfo 对象（包含：applicationId、applicationUrl、queue）
+    
+    OnceJobOperator -->> - SimpleFlinkJobManager :返回 applicationInfo 对象
+    end
+    end
+    SimpleFlinkJobManager ->> SimpleFlinkJobManager : 从 applicationInfo 对象中获取 <br/>applcaitionId,applicationUrl 设置 jobInfo
+    deactivate SimpleFlinkJobManager
+    SimpleFlinkJobManager ->> SimpleFlinkJobManager : jobInfo 设置 resource
+    SimpleFlinkJobManager -->> - FlinkJobManager : 返回 jobInfo
+    
+    FlinkJobManager ->> FlinkJobManager : 存放到缓存 onceJobIdToJobInfo <br /> 返回 engineConnId
+deactivate FlinkJobManager</pre>
 
 <p>这里请求的 linkis 接口地址中路径是 <code>linkisManager/executeEngineConnOperation</code>，对应的执行逻辑入口是 <code>org.apache.linkis.manager.am.restful.EngineRestfulApi#executeEngineConnOperation</code></p>
-<h2 id="更新作业状态"><a href="#更新作业状态" class="headerlink" title="更新作业状态"></a>更新作业状态</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram</span><br><span class="line"></span><br><span class="line">activate TaskService </span><br><span class="line">	activate TaskService</span><br><span class="line">	Note right of TaskService : 调用 updateStreamTaskStatus()&lt;br/&gt; 这个方法内部会判断 task &lt;br /&gt;是否在缓存 onceJobIdToJobInfo 中</span><br><span class="line">	TaskService -&gt;&gt; + FlinkJobManager : getJobInfo() : &lt;br /&gt;从缓存 onceJobIdToJobInfo 获取 jobInfo</span><br><span class="line">	FlinkJobManager -&gt;&gt; + SimpleFlinkJobManager : getStatus() : &lt;br /&gt; 从缓存 onceJobs 中获取 simpleOnceJob</span><br><span class="line">	SimpleFlinkJobManager -&gt;&gt; + SimpleOnceJob : isCompleted() ：调用</span><br><span class="line">	Note over SimpleOnceJob :　这个方法内部会调用 linkis 客户端获取 engineConn 状态</span><br><span class="line">	SimpleOnceJob --&gt;&gt; - SimpleFlinkJobManager : 返回状态</span><br><span class="line">	SimpleFlinkJobManager --&gt;&gt; - FlinkJobManager : 返回状态 status</span><br><span class="line">	Note over FlinkJobManager : jobInfo 设置状态 status</span><br><span class="line">	FlinkJobManager --&gt;&gt; - TaskService :  返回 jobInfo</span><br><span class="line">	Note right of TaskService : 更新 task 的 更新时间和状态&lt;br /&gt; task 状态结束，jobInfo 中 completedMsg 非空&lt;br/&gt;task 设置错误消息 errDesc&lt;br/&gt; jobInfo json 序列化保存到 task 的 linkisJobInfo</span><br><span class="line">	deactivate TaskService</span><br><span class="line">	Note right of TaskService : 最后更新数据表 linkis_stream_task</span><br><span class="line">	</span><br><span class="line">deactivate TaskService</span><br></pre></td></tr></table></figure>
+<h2 id="更新作业状态"><a href="#更新作业状态" class="headerlink" title="更新作业状态"></a>更新作业状态</h2><pre class="mermaid">sequenceDiagram
+
+activate TaskService 
+    activate TaskService
+    Note right of TaskService : 调用 updateStreamTaskStatus()<br/> 这个方法内部会判断 task <br />是否在缓存 onceJobIdToJobInfo 中
+    TaskService ->> + FlinkJobManager : getJobInfo() : <br />从缓存 onceJobIdToJobInfo 获取 jobInfo
+    FlinkJobManager ->> + SimpleFlinkJobManager : getStatus() : <br /> 从缓存 onceJobs 中获取 simpleOnceJob
+    SimpleFlinkJobManager ->> + SimpleOnceJob : isCompleted() ：调用
+    Note over SimpleOnceJob :　这个方法内部会调用 linkis 客户端获取 engineConn 状态
+    SimpleOnceJob -->> - SimpleFlinkJobManager : 返回状态
+    SimpleFlinkJobManager -->> - FlinkJobManager : 返回状态 status
+    Note over FlinkJobManager : jobInfo 设置状态 status
+    FlinkJobManager -->> - TaskService :  返回 jobInfo
+    Note right of TaskService : 更新 task 的 更新时间和状态<br /> task 状态结束，jobInfo 中 completedMsg 非空<br/>task 设置错误消息 errDesc<br/> jobInfo json 序列化保存到 task 的 linkisJobInfo
+    deactivate TaskService
+    Note right of TaskService : 最后更新数据表 linkis_stream_task
+    
+deactivate TaskService</pre>
 
 <p>此外类<code>TaskMonitorService</code>中会启动定时任务调用<code>com.webank.wedatasphere.streamis.jobmanager.manager.service.TaskService$#updateStreamTaskStatus</code>来获取状态。</p>
 
-        </div>
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/streamis/" rel="tag"># streamis</a>
+          </div>
 
         
-            <section class="post-copyright">
-                
-                
-                
-                    <p class="copyright-item">
-                        <span>License:</span>
-                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
-                    </p>
-                
-                
-                     <p class="copyright-item">
-                         <span>Slogan:</span>
-                         <span>To persevere is important. Don't give up, don't give in. There's an answer to everything.</span>
-                     </p>
-                
 
-            </section>
-        
-        <section class="post-tags">
-            <div>
-                <span>Tag(s):</span>
-                <span class="tag">
-                    
-                    
-                        <a href="/tags/streamis/"># streamis</a>
-                    
-                        
-                </span>
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/" rel="prev" title="flinkx 1.11 中使用远程 jar 遇到的问题与处理">
+                  <i class="fa fa-chevron-left"></i> flinkx 1.11 中使用远程 jar 遇到的问题与处理
+                </a>
             </div>
-            <div>
-                <a href="javascript:window.history.back();">back</a>
-                <span>· </span>
-                <a href="/">home</a>
+            <div class="post-nav-item">
             </div>
-        </section>
-        <section class="post-nav">
-            
-            
-            <a class="next" rel="next" href="/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/">flinkx 1.11 中使用远程 jar 遇到的问题与处理</a>
-            
-        </section>
-
-
-    </article>
+          </div>
+    </footer>
+  </article>
 </div>
 
-            </div>
-            <footer id="footer" class="footer">
-    <div class="copyright">
-        <span>© smilenceee | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
-    </div>
-</footer>
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">smilenceee</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
 
     </div>
+  </footer>
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.1.7/mermaid.min.js","integrity":"sha256-G58AID1YoX5YaEtWfXSI0VLrZ6N4kvNvwg0BI8zUFxE="}}</script>
+  <script src="/js/third-party/tags/mermaid.js"></script>
+
+
+
+  
+
+
+
+
+
 </body>
-
 </html>
