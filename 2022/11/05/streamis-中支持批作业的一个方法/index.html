@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha256-AbA177XfpSnFEvgpYu1jMygiLabzPCJCRIBtR5jGc0k=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"yoursite.com","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.13.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":true,"style":"flat"},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="介绍如何在 streamis 中支持 flink 批作业运行。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="streamis 中支持批作业的一个方法">
+<meta property="og:url" content="http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/index.html">
+<meta property="og:site_name" content="宁静致远">
+<meta property="og:description" content="介绍如何在 streamis 中支持 flink 批作业运行。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/163829464-96e1e3ab-0448-4bb1-aa08-29b560f8e48f-16504201338512.png">
+<meta property="og:image" content="http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/163829298-9c2e7b57-17e3-484a-8391-f5819115d461-16504201890874.png">
+<meta property="og:image" content="http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/image-20220420181541309.png">
+<meta property="article:published_time" content="2022-11-05T08:46:21.000Z">
+<meta property="article:modified_time" content="2022-11-05T08:50:56.511Z">
+<meta property="article:author" content="FanHaiQiang">
+<meta property="article:tag" content="streamis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/163829464-96e1e3ab-0448-4bb1-aa08-29b560f8e48f-16504201338512.png">
+
+
+<link rel="canonical" href="http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/","path":"2022/11/05/streamis-中支持批作业的一个方法/","title":"streamis 中支持批作业的一个方法"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>streamis 中支持批作业的一个方法 | 宁静致远</title>
+  
+
+
+
+
+
+
+  <script async defer data-website-id="" src=""></script>
+
+  <script defer data-domain="" src=""></script>
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">宁静致远</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">recording & rethinking</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3"><span class="nav-number">3.</span> <span class="nav-text">解决</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="FanHaiQiang"
+      src="/images/my_avatar.gif">
+  <p class="site-author-name" itemprop="name">FanHaiQiang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+        <div class="back-to-top animated" role="button" aria-label="返回顶部">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/my_avatar.gif">
+      <meta itemprop="name" content="FanHaiQiang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静致远">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="streamis 中支持批作业的一个方法 | 宁静致远">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          streamis 中支持批作业的一个方法
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2022-11-05 16:46:21 / 修改时间：16:50:56" itemprop="dateCreated datePublished" datetime="2022-11-05T16:46:21+08:00">2022-11-05</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>介绍如何在 streamis 中支持 flink 批作业运行。</p>
+<span id="more"></span>
+
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在 streamis 提交了一个 flink.sql 类型的批作业，执行的 flink sql 是</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;linkis flink engine test!!!&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>执行结果失败</p>
+<p><img src="/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/163829464-96e1e3ab-0448-4bb1-aa08-29b560f8e48f-16504201338512.png" alt="image"></p>
+<p>不过对应的 yarn application 的 FinalStatus 是 SUCCEEDED</p>
+<p><img src="/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/163829298-9c2e7b57-17e3-484a-8391-f5819115d461-16504201890874.png" alt="image"></p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>streamis 提交作业的流程大致是</p>
+<ol>
+<li><p>构建一次性作业</p>
+<p>访问接口<code>/streamis/streamJobManager/job/execute</code>，从数据库中获取 job 信息，封装到<code>StreamisTransformJob</code>实例 中，再经过一系列的转换（<code>Transform</code>）处理（添加 labels、source、作业配置、launchConfig）后得到一个<code>LaunchJob</code>实例。这个实例，会有 linkis 的 <code>SimpleOnceJobBuilder</code> 转成一个 <code>SubmittableSimpleOnceJob</code> 对象，封装了 linkis 客户端和引擎创建 action：<code>CreateEngineConnAction</code>，此外还会将作业要执行的 sql 作为资源上传到 HDFS 便于引擎执行时获取到</p>
+</li>
+<li><p>提交创建引擎</p>
+<p>提交上文创建的 <code>SubmittableSimpleOnceJob</code>，通过 linkis 客户端执行请求<code>CreateEngineConnAction</code>，然后在一个循环中等待引擎就绪，得到一个<code>engineConnId</code>。linkis 启动引擎的过程中，会创建一个<code>FlinkCodeOnceExecutor</code>实例的执行器，这个执行器内部会存储 yarn application id 和 作业所在 node manager 的地址。保存<code>engineConnId</code>和<code>SubmittableSimpleOnceJob</code>实例的映射到缓存<code>onceJobs</code>中。</p>
+</li>
+<li><p>获取引擎信息</p>
+<p>内部创建一个<code>EngineConnOperateAction</code>，通过 linkis 客户端请求，拿到上面的 yarn application id 和 node manger 地址，与 <code>engineConnId</code>、提交用户、ECM 实例 等封装一个 <code>FlinkJobInfo</code> 实例中。保存<code>engineConnId</code>和<code>FlinkJobInfo</code>实例的映射到缓存<code>onceJobIdToJobInfo</code>中。</p>
+</li>
+<li><p>更新作业状态</p>
+<p>类<code>TaskMonitorService</code> 中有个定时任务，从数据库中获取未完成的任务，根据任务的 <code>engineConnId</code>从映射中拿到<code>SubmittableSimpleOnceJob</code>实例，内部会创建一个<code>GetEngineConnAction</code>，有 linkis 客户端发起请求，获取节点信息，里面包含了引擎的状态。</p>
+</li>
+</ol>
+<p>streamis 的失败日志</p>
+<figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="symbol">24129 </span><span class="number">2022</span>-<span class="number">03</span>-<span class="number">23</span> <span class="number">19</span>:<span class="number">35</span>:<span class="number">35.091</span> INFO  [Linkis-Default-Scheduler-Thread-<span class="number">13</span>] <span class="keyword">com</span>.webank.wedatasphere.streamis.jobmanager.manager.service.TaskMonitorService <span class="number">41</span> info - Try <span class="keyword">to</span> update status of StreamJob-demo_flink_00.</span><br><span class="line"><span class="symbol">24130 </span><span class="number">2022</span>-<span class="number">03</span>-<span class="number">23</span> <span class="number">19</span>:<span class="number">35</span>:<span class="number">35.203</span> <span class="keyword">ERROR</span> [Linkis-Default-Scheduler-Thread-<span class="number">13</span>] <span class="keyword">com</span>.webank.wedatasphere.streamis.jobmanager.manager.service.TaskMonitorService <span class="number">58</span> <span class="keyword">error</span> - Fetch StreamJob-demo_flink_00 failed, maybe the Linkis cluster is wrong, please be noticed! org.apache.linkis.httpclient.exception.HttpClientResultException: errCode: <span class="number">10905</span> ,desc: URL /api/rest_j/v1/linkisManager/getEngineConn request failed! ResponseBody is &#123;<span class="string">&quot;method&quot;</span>:null,<span class="string">&quot;status&quot;</span>:<span class="number">1</span>,<span class="string">&quot;message&quot;</span>:<span class="string">&quot;errorcode(错误码): 210003, error message(错误信息): Not exists EngineConn(不存在的引擎).&quot;</span>,<span class="string">&quot;data&quot;</span>:&#123;<span class="string">&quot;errorMsg&quot;</span>:&#123;<span class="string">&quot;serviceKind&quot;</span>:<span class="string">&quot;linkis-cg-linkismanager&quot;</span>,<span class="string">&quot;level&quot;</span>:<span class="number">2</span>,<span class="string">&quot;port&quot;</span>:<span class="number">9111</span>,<span class="string">&quot;errCode&quot;</span>:<span class="number">210003</span>,<span class="string">&quot;ip&quot;</span>:<span class="string">&quot;10-177-198-114.ostream-test.dgtest01&quot;</span>, <span class="string">&quot;desc&quot;</span>:<span class="string">&quot;Not exists EngineConn(不存在的引擎)&quot;</span>&#125;&#125;&#125;. ,ip: <span class="number">10</span>-<span class="number">177</span>-<span class="number">198</span>-<span class="number">114</span>.ostream-test.dgtest01 ,port: <span class="number">9400</span> ,serviceKind: streamis-server</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight reasonml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">2022</span>-<span class="number">04</span>-<span class="number">19</span> <span class="number">10</span>:<span class="number">59</span>:<span class="number">35.091</span> INFO  <span class="literal">[L<span class="identifier">inkis</span>-D<span class="identifier">efault</span>-S<span class="identifier">cheduler</span>-T<span class="identifier">hread</span>-<span class="number">14</span>]</span> com.webank.wedatasphere.streamis.jobmanager.manager.service.TaskMonitorService <span class="number">41</span> info - Try <span class="keyword">to</span> update status <span class="keyword">of</span> StreamJob-demo_flink_00.</span><br><span class="line"><span class="number">2022</span>-<span class="number">04</span>-<span class="number">19</span> <span class="number">10</span>:<span class="number">59</span>:<span class="number">35.117</span> INFO  <span class="literal">[L<span class="identifier">inkis</span>-D<span class="identifier">efault</span>-S<span class="identifier">cheduler</span>-T<span class="identifier">hread</span>-<span class="number">14</span>]</span> com.webank.wedatasphere.streamis.jobmanager.manager.service.TaskMonitorService <span class="number">222</span> updateStreamTaskStatus - StreamJob-demo_flink_00 is Failed <span class="keyword">with</span> <span class="constructor">FlinkJobInfo(<span class="params">id</span>: 36_20_8e315be6-<span class="params">d4f5</span>-4151-<span class="params">a02f</span>-<span class="params">a54daa53c10blinkis</span>-<span class="params">cg</span>-<span class="params">engineconn10</span>-177-198-114.<span class="params">ostream</span>-<span class="params">test</span>.<span class="params">dgtest01</span>:33836, <span class="params">status</span>: Failed, <span class="params">applicationId</span>: <span class="params">application_1644979452149_41155</span>, <span class="params">applicationUrl</span>: <span class="params">http</span>:<span class="operator">/</span><span class="operator">/</span>10-177-198-117.<span class="params">ostream</span>-<span class="params">test</span>.<span class="params">dgtest01</span>:36877, <span class="params">logPath</span>: <span class="params">null</span>)</span>.</span><br></pre></td></tr></table></figure>
+
+<p>这两种日志原因是一个，引擎执行失败。</p>
+<p>EngineConnServer 启动过程中会有两个定时任务</p>
+<ol>
+<li><code>org.apache.linkis.engineconn.acessible.executor.service.DefaultExecutorHeartbeatService</code> 会启动一个定时任务发送心跳<code>nodeHeartbeatMsg</code>，其中包含了执行器的状态，<code>org.apache.linkis.manager.am.service.heartbeat.AMHeartbeatService#heartbeatEventDeal</code>会来处理收到的心跳，将心跳<code>NodeHeartbeatMsg</code>处理成<code>nodeMetrics</code>，持久化到表<code>linkis_cg_manager_service_instance_metrics</code>中</li>
+<li><code>org.apache.linkis.manager.am.service.heartbeat.AMHeartbeatService</code>这个定时任务会从数据库中获取EngineNode，检查状态，如果状态是完成（包括：Success&#x2F;Failed&#x2F;ShuttingDown），就会执行清理操作，通过 pid 将 EngineServer kill 掉，最后将 EngineNode 信息从数据库删除</li>
+</ol>
+<p>streamis 查询的时候，如果数据库中的引擎信息还在，就会返回下面的日志；如果不在了，就是上面的错误。</p>
+<p>那为什么引擎会执行失败呢？从 EngineServer 的日志中大致可以看到，失败有两个地方</p>
+<ol>
+<li><p>FlinkCodeOnceExecutor 启动之后，有个等待启动的环节，这个方法<code>org.apache.linkis.engineconnplugin.flink.executor.FlinkOnceExecutor#waitToRunning</code>，这个方法内部会通过<code>clusterDescriptor.getJobStatus</code>获取状态</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> JobStatus <span class="title function_">getJobStatus</span><span class="params">()</span> <span class="keyword">throws</span> JobExecutionException &#123;</span><br><span class="line">    <span class="keyword">if</span> (jobId == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">JobExecutionException</span>(<span class="string">&quot;No job has been submitted. This is a bug.&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> bridgeClientRequest(<span class="built_in">this</span>.executionContext, jobId, () -&gt; clusterClient.getJobStatus(jobId), <span class="literal">false</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里调用<code>clusterClient.getJobStatus(jobId)</code>会抛出下面的异常</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">22</span>/<span class="number">04</span>/<span class="number">19</span> <span class="number">10</span>:<span class="number">58</span>:<span class="number">07</span> ERROR deployment<span class="selector-class">.ClusterDescriptorAdapter</span>: Job: <span class="number">0</span>ea16c3a35df0649d6100c14b18c33c6 operation failed!</span><br><span class="line"><span class="number">22</span>/<span class="number">04</span>/<span class="number">19</span> <span class="number">10</span>:<span class="number">58</span>:<span class="number">07</span> ERROR executor<span class="selector-class">.FlinkCodeOnceExecutor</span>: Fetch job status failed! retried ++<span class="number">1</span>...</span><br><span class="line">LinkisException&#123;errCode=<span class="number">16023</span>, desc=<span class="string">&#x27;Job: 0ea16c3a35df0649d6100c14b18c33c6 operation failed!&#x27;</span>, ip=<span class="string">&#x27;10-177-198-114.test.dgtest01&#x27;</span>, port=<span class="number">33836</span>, serviceKind=<span class="string">&#x27;linkis-cg-engineconn&#x27;</span>&#125;</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.client</span><span class="selector-class">.deployment</span><span class="selector-class">.ClusterDescriptorAdapter</span><span class="selector-class">.bridgeClientRequest</span>(ClusterDescriptorAdapter<span class="selector-class">.java</span>:<span class="number">136</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.client</span><span class="selector-class">.deployment</span><span class="selector-class">.ClusterDescriptorAdapter</span><span class="selector-class">.getJobStatus</span>(ClusterDescriptorAdapter<span class="selector-class">.java</span>:<span class="number">88</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span>$<span class="variable">$anonfun</span>$<span class="number">2</span><span class="selector-class">.apply</span>(FlinkOnceExecutor<span class="selector-class">.scala</span>:<span class="number">87</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span>$<span class="variable">$anonfun</span>$<span class="number">2</span><span class="selector-class">.apply</span>(FlinkOnceExecutor<span class="selector-class">.scala</span>:<span class="number">87</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.common</span><span class="selector-class">.utils</span>.Utils$<span class="selector-class">.tryCatch</span>(Utils<span class="selector-class">.scala</span>:<span class="number">40</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span><span class="selector-class">.run</span>(FlinkOnceExecutor<span class="selector-class">.scala</span>:<span class="number">87</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.Executors<span class="variable">$RunnableAdapter</span><span class="selector-class">.call</span>(Executors<span class="selector-class">.java</span>:<span class="number">511</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.FutureTask</span><span class="selector-class">.runAndReset</span>(FutureTask<span class="selector-class">.java</span>:<span class="number">308</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.ScheduledThreadPoolExecutor<span class="variable">$ScheduledFutureTask</span>.access$<span class="number">301</span>(ScheduledThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">180</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.ScheduledThreadPoolExecutor<span class="variable">$ScheduledFutureTask</span><span class="selector-class">.run</span>(ScheduledThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">294</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.ThreadPoolExecutor</span><span class="selector-class">.runWorker</span>(ThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">1149</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.ThreadPoolExecutor<span class="variable">$Worker</span><span class="selector-class">.run</span>(ThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">624</span>)</span><br><span class="line">	at java<span class="selector-class">.lang</span><span class="selector-class">.Thread</span><span class="selector-class">.run</span>(Thread<span class="selector-class">.java</span>:<span class="number">748</span>)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Flink 获取结果超时，<code>org.apache.linkis.engineconnplugin.flink.executor.FlinkCodeOnceExecutor#doSubmit</code></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">doSubmit</span></span>(onceExecutorExecutionContext: <span class="type">OnceExecutorExecutionContext</span>,</span><br><span class="line">                      options: <span class="type">Map</span>[<span class="type">String</span>, <span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">	<span class="comment">// ...</span></span><br><span class="line">    future = <span class="type">Utils</span>.defaultScheduler.submit(<span class="keyword">new</span> <span class="type">Runnable</span> &#123;</span><br><span class="line">        <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">run</span></span>(): <span class="type">Unit</span> = &#123;</span><br><span class="line">            info(<span class="string">&quot;Try to execute codes.&quot;</span>)</span><br><span class="line">            <span class="type">RelMetadataQueryBase</span>.<span class="type">THREAD_PROVIDERS</span>.set(<span class="type">JaninoRelMetadataProvider</span>.of(<span class="type">FlinkDefaultRelMetadataProvider</span>.<span class="type">INSTANCE</span>))</span><br><span class="line">            <span class="type">Utils</span>.tryCatch(<span class="type">CodeParserFactory</span>.getCodeParser(<span class="type">CodeType</span>.<span class="type">SQL</span>).parse(codes).filter(<span class="type">StringUtils</span>.isNotBlank).foreach(runCode))&#123; t =&gt;</span><br><span class="line">                error(<span class="string">&quot;Run code failed!&quot;</span>, t)</span><br><span class="line">                setResponse(<span class="type">ErrorExecuteResponse</span>(<span class="string">&quot;Run code failed!&quot;</span>, t))</span><br><span class="line">                tryFailed()</span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">            &#125;</span><br><span class="line">            info(<span class="string">&quot;All codes completed, now stop FlinkEngineConn.&quot;</span>)</span><br><span class="line">            trySucceed()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="keyword">this</span> synchronized wait()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里在 <code>runCode</code> 中获取结果会超时，在方法<code>tryFailed()</code>将状态修改为 Failed。</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">22</span>/<span class="number">04</span>/<span class="number">19</span> <span class="number">10</span>:<span class="number">59</span>:<span class="number">13</span> ERROR executor<span class="selector-class">.FlinkCodeOnceExecutor</span>: Run <span class="selector-tag">code</span> failed!</span><br><span class="line">java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.ExecutionException</span>: java<span class="selector-class">.lang</span><span class="selector-class">.RuntimeException</span>: Failed to fetch next result</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.CompletableFuture</span><span class="selector-class">.reportGet</span>(CompletableFuture<span class="selector-class">.java</span>:<span class="number">357</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.CompletableFuture</span><span class="selector-class">.get</span>(CompletableFuture<span class="selector-class">.java</span>:<span class="number">1895</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.table</span><span class="selector-class">.api</span><span class="selector-class">.internal</span><span class="selector-class">.TableResultImpl</span><span class="selector-class">.awaitInternal</span>(TableResultImpl<span class="selector-class">.java</span>:<span class="number">123</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.table</span><span class="selector-class">.api</span><span class="selector-class">.internal</span><span class="selector-class">.TableResultImpl</span><span class="selector-class">.await</span>(TableResultImpl<span class="selector-class">.java</span>:<span class="number">86</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span><span class="selector-class">.FlinkCodeOnceExecutor</span><span class="selector-class">.runCode</span>(FlinkCodeOnceExecutor<span class="selector-class">.scala</span>:<span class="number">122</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkCodeOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span>$<span class="variable">$anonfun</span><span class="variable">$run</span>$<span class="number">1</span>$<span class="variable">$anonfun</span><span class="variable">$apply</span><span class="variable">$mcV</span><span class="variable">$sp</span>$<span class="number">2</span><span class="selector-class">.apply</span>(FlinkCodeOnceExecutor<span class="selector-class">.scala</span>:<span class="number">72</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkCodeOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span>$<span class="variable">$anonfun</span><span class="variable">$run</span>$<span class="number">1</span>$<span class="variable">$anonfun</span><span class="variable">$apply</span><span class="variable">$mcV</span><span class="variable">$sp</span>$<span class="number">2</span><span class="selector-class">.apply</span>(FlinkCodeOnceExecutor<span class="selector-class">.scala</span>:<span class="number">72</span>)</span><br><span class="line">	at scala<span class="selector-class">.collection</span>.IndexedSeqOptimized<span class="variable">$class</span><span class="selector-class">.foreach</span>(IndexedSeqOptimized<span class="selector-class">.scala</span>:<span class="number">33</span>)</span><br><span class="line">	at scala<span class="selector-class">.collection</span><span class="selector-class">.mutable</span>.ArrayOps<span class="variable">$ofRef</span><span class="selector-class">.foreach</span>(ArrayOps<span class="selector-class">.scala</span>:<span class="number">186</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkCodeOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span>$<span class="variable">$anonfun</span><span class="variable">$run</span>$<span class="number">1</span>.apply<span class="variable">$mcV</span><span class="variable">$sp</span>(FlinkCodeOnceExecutor<span class="selector-class">.scala</span>:<span class="number">72</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkCodeOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span>$<span class="variable">$anonfun</span><span class="variable">$run</span>$<span class="number">1</span><span class="selector-class">.apply</span>(FlinkCodeOnceExecutor<span class="selector-class">.scala</span>:<span class="number">72</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkCodeOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span>$<span class="variable">$anonfun</span><span class="variable">$run</span>$<span class="number">1</span><span class="selector-class">.apply</span>(FlinkCodeOnceExecutor<span class="selector-class">.scala</span>:<span class="number">72</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.common</span><span class="selector-class">.utils</span>.Utils$<span class="selector-class">.tryCatch</span>(Utils<span class="selector-class">.scala</span>:<span class="number">40</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.linkis</span><span class="selector-class">.engineconnplugin</span><span class="selector-class">.flink</span><span class="selector-class">.executor</span>.FlinkCodeOnceExecutor$<span class="variable">$anon</span>$<span class="number">1</span><span class="selector-class">.run</span>(FlinkCodeOnceExecutor<span class="selector-class">.scala</span>:<span class="number">72</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.Executors<span class="variable">$RunnableAdapter</span><span class="selector-class">.call</span>(Executors<span class="selector-class">.java</span>:<span class="number">511</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.FutureTask</span><span class="selector-class">.run</span>(FutureTask<span class="selector-class">.java</span>:<span class="number">266</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.ScheduledThreadPoolExecutor<span class="variable">$ScheduledFutureTask</span>.access$<span class="number">201</span>(ScheduledThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">180</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.ScheduledThreadPoolExecutor<span class="variable">$ScheduledFutureTask</span><span class="selector-class">.run</span>(ScheduledThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">293</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.ThreadPoolExecutor</span><span class="selector-class">.runWorker</span>(ThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">1149</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.ThreadPoolExecutor<span class="variable">$Worker</span><span class="selector-class">.run</span>(ThreadPoolExecutor<span class="selector-class">.java</span>:<span class="number">624</span>)</span><br><span class="line">	at java<span class="selector-class">.lang</span><span class="selector-class">.Thread</span><span class="selector-class">.run</span>(Thread<span class="selector-class">.java</span>:<span class="number">748</span>)</span><br><span class="line">Caused by: java<span class="selector-class">.lang</span><span class="selector-class">.RuntimeException</span>: Failed to fetch next result</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.collect</span><span class="selector-class">.CollectResultIterator</span><span class="selector-class">.nextResultFromFetcher</span>(CollectResultIterator<span class="selector-class">.java</span>:<span class="number">109</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.collect</span><span class="selector-class">.CollectResultIterator</span><span class="selector-class">.hasNext</span>(CollectResultIterator<span class="selector-class">.java</span>:<span class="number">80</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.table</span><span class="selector-class">.planner</span><span class="selector-class">.sinks</span>.SelectTableSinkBase<span class="variable">$RowIteratorWrapper</span><span class="selector-class">.hasNext</span>(SelectTableSinkBase<span class="selector-class">.java</span>:<span class="number">117</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.table</span><span class="selector-class">.api</span><span class="selector-class">.internal</span>.TableResultImpl<span class="variable">$CloseableRowIteratorWrapper</span><span class="selector-class">.hasNext</span>(TableResultImpl<span class="selector-class">.java</span>:<span class="number">350</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.table</span><span class="selector-class">.api</span><span class="selector-class">.internal</span>.TableResultImpl<span class="variable">$CloseableRowIteratorWrapper</span><span class="selector-class">.isFirstRowReady</span>(TableResultImpl<span class="selector-class">.java</span>:<span class="number">363</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.table</span><span class="selector-class">.api</span><span class="selector-class">.internal</span><span class="selector-class">.TableResultImpl</span>.lambda<span class="variable">$awaitInternal</span>$<span class="number">1</span>(TableResultImpl<span class="selector-class">.java</span>:<span class="number">110</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span>.CompletableFuture<span class="variable">$AsyncRun</span><span class="selector-class">.run</span>(CompletableFuture<span class="selector-class">.java</span>:<span class="number">1626</span>)</span><br><span class="line">	... <span class="number">3</span> more</span><br><span class="line">Caused by: java<span class="selector-class">.io</span><span class="selector-class">.IOException</span>: Failed to fetch job execution result</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.collect</span><span class="selector-class">.CollectResultFetcher</span><span class="selector-class">.getAccumulatorResults</span>(CollectResultFetcher<span class="selector-class">.java</span>:<span class="number">169</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.collect</span><span class="selector-class">.CollectResultFetcher</span><span class="selector-class">.next</span>(CollectResultFetcher<span class="selector-class">.java</span>:<span class="number">118</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.collect</span><span class="selector-class">.CollectResultIterator</span><span class="selector-class">.nextResultFromFetcher</span>(CollectResultIterator<span class="selector-class">.java</span>:<span class="number">106</span>)</span><br><span class="line">	... <span class="number">9</span> more</span><br><span class="line">Caused by: java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.TimeoutException</span></span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.CompletableFuture</span><span class="selector-class">.timedGet</span>(CompletableFuture<span class="selector-class">.java</span>:<span class="number">1771</span>)</span><br><span class="line">	at java<span class="selector-class">.util</span><span class="selector-class">.concurrent</span><span class="selector-class">.CompletableFuture</span><span class="selector-class">.get</span>(CompletableFuture<span class="selector-class">.java</span>:<span class="number">1915</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.collect</span><span class="selector-class">.CollectResultFetcher</span><span class="selector-class">.getAccumulatorResults</span>(CollectResultFetcher<span class="selector-class">.java</span>:<span class="number">167</span>)</span><br><span class="line">	... <span class="number">11</span> more</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>上面的这个问题提了 issue，我个人的理解是：这是与 Flink 的 per-job 模式相关的，per-job 模式的特点的一个任务一个集群，任务运行完毕，集群就被销毁掉了，所以在任务结束后想获取任务状态和结果的行不通的。</p>
+<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><ol>
+<li>Flink per job 模式下，任务执行结束后，通过回调返回状态</li>
+<li>streamis 以 session 模式提交</li>
+<li>streamis 直接查询 yarn 获取任务状态</li>
+</ol>
+<p>这三种方案中，</p>
+<ul>
+<li><p>第一个由于需要修改 flink 的代码，比较复杂，调用方（linkis）也要做相应修改，比如要传一个回调地址给 flink，要有处理回调的逻辑。</p>
+</li>
+<li><p>第二个，虽然可以解决 per job 模式下，任务运行结束后集群销毁的问题，但是产生更多的问题，比如 session 集群里面，可以执行多个任务，获取某一个任务的执行状态，需要额外的处理；由于多个任务同时运行在一个集群中，资源隔离也是个问题</p>
+</li>
+<li><p>关于第三个方案，从前面的分析中，在 streamis 提交任务的过程中，会从 linkis 获取一个<code>FlinkJobInfo</code>，这个对象封装了 applicationId 和 applicationUrl，这个两个变量是在方法<code>org.apache.linkis.engineconnplugin.flink.executor.FlinkOnceExecutor#submit</code></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="function"><span class="keyword">def</span> <span class="title">submit</span></span>(onceExecutorExecutionContext: <span class="type">OnceExecutorExecutionContext</span>): <span class="type">Unit</span> = &#123;</span><br><span class="line">    <span class="type">ClusterDescriptorAdapterFactory</span>.create(flinkEngineConnContext.getExecutionContext) <span class="keyword">match</span> &#123;</span><br><span class="line">        <span class="keyword">case</span> adapter: <span class="type">T</span> =&gt; clusterDescriptor = adapter</span><br><span class="line">        <span class="keyword">case</span> _ =&gt; <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">ExecutorInitException</span>(<span class="string">&quot;Not support ClusterDescriptorAdapter for flink application.&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">val</span> options = onceExecutorExecutionContext.getOnceExecutorContent.getJobContent.map &#123;</span><br><span class="line">        <span class="keyword">case</span> (k, v: <span class="type">String</span>) =&gt; k -&gt; v</span><br><span class="line">        <span class="keyword">case</span> (k, v) <span class="keyword">if</span> v != <span class="literal">null</span> =&gt; k -&gt; v.toString</span><br><span class="line">        <span class="keyword">case</span> (k, _) =&gt; k -&gt; <span class="literal">null</span></span><br><span class="line">    &#125;.toMap</span><br><span class="line">    doSubmit(onceExecutorExecutionContext, options)</span><br><span class="line">    <span class="keyword">if</span>(isCompleted) <span class="keyword">return</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">null</span> == clusterDescriptor.getClusterID)</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">ExecutorInitException</span>(<span class="string">&quot;The application start failed, since yarn applicationId is null.&quot;</span>)</span><br><span class="line">    setApplicationId(clusterDescriptor.getClusterID.toString)</span><br><span class="line">    setApplicationURL(clusterDescriptor.getWebInterfaceUrl)</span><br><span class="line">    info(<span class="string">s&quot;Application is started, applicationId: <span class="subst">$getApplicationId</span>, applicationURL: <span class="subst">$getApplicationURL</span>.&quot;</span>)</span><br><span class="line">    <span class="keyword">if</span>(clusterDescriptor.getJobId != <span class="literal">null</span>) setJobID(clusterDescriptor.getJobId.toHexString)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从日志中看到 applicationId 和 applicationURL 的取值</p>
+<figure class="highlight dns"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./linkis-cg-engineconnmanager.out:<span class="number">8</span>e315be6-d<span class="number">4f5-4151</span>-a02f-a54daa53c10b:<span class="number">22/04/19 10</span>:<span class="number">56</span>:<span class="number">52</span> INFO executor.FlinkCodeOnceExecutor: Application is started, applicationId: application_1644979<span class="number">452149_41155</span>, applicationURL: http://<span class="number">10-177-198-117</span>.ostream-test.dgtest<span class="number">01:36877</span></span><br></pre></td></tr></table></figure>
+
+<p>这里 applicationURL  是与任务绑定的（端口：36877），问题是任务跑结束后，这个端口的访问不了的。不过，已经有了 applicationId，通过 yarn 的接口就可以知道这个任务运行的结果。yarn 接口地址从哪里获取？</p>
+<p>这个方法进来后，先会创建一个<code>clusterDescriptor</code>，在 streamis 这个场景中，会创建一个<code>org.apache.linkis.engineconnplugin.flink.client.deployment.YarnPerJobClusterDescriptorAdapter</code>实例，它的父类<code>org.apache.linkis.engineconnplugin.flink.client.deployment.ClusterDescriptorAdapter</code> 中有一个<code>YarnClusterDescriptor</code>类型的成员，这个类中有一个<code>YarnClient</code>对象<code>yarnClient</code>。</p>
+<p><code>yarnClient</code>这个对象的创建会用到配置文件<code>yarn-conf.xml</code>，通过处理可以获取到配置文件中 resource manager 的地址，将这个地址保存到执行器中。</p>
+<p>当 streamis 来获取引擎信息的时候，设置到返回消息中，具体是这个方法<code>org.apache.linkis.engineconn.acessible.executor.operator.impl.EngineConnApplicationInfoOperator#apply</code></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">apply</span></span>(<span class="keyword">implicit</span> parameters: <span class="type">Map</span>[<span class="type">String</span>, <span class="type">Any</span>]): <span class="type">Map</span>[<span class="type">String</span>, <span class="type">Any</span>] = &#123;</span><br><span class="line">    <span class="type">ExecutorManager</span>.getInstance.getReportExecutor <span class="keyword">match</span> &#123;</span><br><span class="line">        <span class="keyword">case</span> yarnExecutor: <span class="type">YarnExecutor</span> =&gt;</span><br><span class="line">        <span class="type">Map</span>(<span class="string">&quot;applicationId&quot;</span> -&gt; yarnExecutor.getApplicationId, <span class="string">&quot;applicationUrl&quot;</span> -&gt; yarnExecutor.getApplicationURL,</span><br><span class="line">            <span class="string">&quot;queue&quot;</span> -&gt; yarnExecutor.getQueue, <span class="string">&quot;yarnMode&quot;</span> -&gt; yarnExecutor.getYarnMode)</span><br><span class="line">        <span class="keyword">case</span> _ =&gt; <span class="keyword">throw</span> <span class="type">EngineConnException</span>(<span class="number">20301</span>, <span class="string">&quot;EngineConn is not a yarn application, cannot fetch applicaiton info.&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>streamis 其实有将<code>FlinkJobInfo</code>保存在表<code>linkis_stream_task</code> 中</p>
+<p><img src="/2022/11/05/streamis-%E4%B8%AD%E6%94%AF%E6%8C%81%E6%89%B9%E4%BD%9C%E4%B8%9A%E7%9A%84%E4%B8%80%E4%B8%AA%E6%96%B9%E6%B3%95/image-20220420181541309.png" alt="image"></p>
+<p>当<code>TaskMonitorService</code>中的定时任务从表<code>linkis_stream_task</code>获取到需要更新状态的作业的，替换原来更新逻辑为调用保存的 yarn rm 地址查询对应的 applicationId 的状态。</p>
+</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/streamis/" rel="tag"># streamis</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/11/05/%E8%8E%B7%E5%8F%96%E5%AF%B9%E8%B4%A6%E6%95%B0%E6%8D%AE/" rel="prev" title="获取对账数据">
+                  <i class="fa fa-chevron-left"></i> 获取对账数据
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/11/05/flinkx-%E5%86%99-s3/" rel="next" title="flinkx 写 s3">
+                  flinkx 写 s3 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">FanHaiQiang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.1.7/mermaid.min.js","integrity":"sha256-G58AID1YoX5YaEtWfXSI0VLrZ6N4kvNvwg0BI8zUFxE="}}</script>
+  <script src="/js/third-party/tags/mermaid.js"></script>
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
