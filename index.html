@@ -157,13 +157,13 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-count">8</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-count">5</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -196,6 +196,89 @@
 
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/my_avatar.gif">
+      <meta itemprop="name" content="FanHaiQiang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="宁静致远">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 宁静致远">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/" class="post-title-link" itemprop="url">日志门面混用下的格式问题</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2022-11-05 14:30:48 / 修改时间：14:56:40" itemprop="dateCreated datePublished" datetime="2022-11-05T14:30:48+08:00">2022-11-05</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>flinkx 1.11 提交中日志中有个问题：</p>
+<p><img src="/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/image-20221105143311217.png" alt="image-20221105143311217">  </p>
+<p>输出日志中既有 log4j 也有 logback。为什么会这样呢？  当时为了验证会使用哪个配置文件，在 flinkx-launcher 的资源目录中放了 3 个日志配置文件  </p>
+<p><img src="/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/image-20221105143644773.png" alt="image-20221105143644773"></p>
+<p>其中 log4j 和 logback 的 layout 配置中分别设置了 log4j 和 logback 字样。从上面的 launcher 的启动日志中，惊奇的发现使用了两个日志配置文件，说明使用了两个日志实现框架，为什么会这样呢？<br>其中 log4j 对应的日志是  </p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">2022</span>-<span class="number">07</span>-<span class="number">29</span> <span class="number">15</span>:<span class="number">07</span>:<span class="number">40</span>,<span class="number">903</span> log4j - <span class="number">0</span>    WARN  <span class="selector-attr">[main]</span> org<span class="selector-class">.apache</span><span class="selector-class">.hadoop</span><span class="selector-class">.util</span><span class="selector-class">.NativeCodeLoader</span>:Unable to load native-hadoop library <span class="keyword">for</span> your platform... using builtin-java classes where applicable</span><br><span class="line"><span class="number">2022</span>-<span class="number">07</span>-<span class="number">29</span> <span class="number">15</span>:<span class="number">07</span>:<span class="number">43</span>,<span class="number">483</span> log4j - <span class="number">2580</span> INFO  <span class="selector-attr">[main]</span> org<span class="selector-class">.apache</span><span class="selector-class">.hadoop</span><span class="selector-class">.yarn</span><span class="selector-class">.client</span><span class="selector-class">.api</span><span class="selector-class">.impl</span><span class="selector-class">.YarnClientImpl</span>:Submitted application application_1644979452149_289296</span><br></pre></td></tr></table></figure>
+<p>看了类<code>org.apache.hadoop.yarn.client.api.impl.YarnClientImpl</code>中 logger 对象的获取，它是从 Apache Common Logging 中获取的（类<code>org.apache.commons.logging.LogFactory;</code>）。</p>
+<blockquote>
+<p>关于 ACL 的解释，见文章<a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000041422727">5分钟搞定混乱的Java日志体系</a>：  2002年8月Apache推出了JCL（Jakarta Commons Logging），也就是日志抽象层，支持运行时动态加载日志组件的实现，当然也提供一个默认实现Simple Log（在ClassLoader中进行查找，如果能找到Log4j则默认使用log4j实现，如果没有则使用JUL 实现，再没有则使用JCL内部提供的Simple Log实现）。  </p>
+</blockquote>
+<p>一句话 ACL 是一个类似 slf4j 的门面，默认使用 log4j。  看到这里，有一个猜测：既然 ACL 默认使用 log4j，类路径中存在 log4j 的 jar 包，上面日志中出现 log4j 就对了。</p>
+<p>接下来要做的是：把 flinkx 工程里面的 log4j 全部排掉，只保留 logback，同时引入一个 ACL 到 slf4j 的转换包，用于支持需要使用 ACL 的逻辑。<del>此外：slf4j-log4j12 是 hive 的依赖中引入的，通过 exclude 方法没法排除，考虑使用 shade 插件来做排除。</del>重新打包上传，执行看提交日志</p>
+<p><img src="/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/image-20221105143819305.png" alt="image-20221105143819305">  </p>
+<p>从中可以看到之前的日志中 log4j 字样变成了 logback，说明之前的想法是对的。</p>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
