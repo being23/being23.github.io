@@ -3,7 +3,10 @@
   <entry>
     <title>PG 读取大量数据因临时空间不足导致任务失败</title>
     <url>/2022/10/30/PG-%E8%AF%BB%E5%8F%96%E5%A4%A7%E9%87%8F%E6%95%B0%E6%8D%AE%E5%9B%A0%E4%B8%B4%E6%97%B6%E7%A9%BA%E9%97%B4%E4%B8%8D%E8%B6%B3%E5%AF%BC%E8%87%B4%E4%BB%BB%E5%8A%A1%E5%A4%B1%E8%B4%A5/</url>
-    <content><![CDATA[<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>业务方有一个同步 PG 的作业，数据量级大致是 1.5+ 亿条。任务执行失败，报错</p>
+    <content><![CDATA[<p>记录 flinkx 1.11 同步 PG 数据量过亿时，由于生成的同步 SQL 中包含的排序子句，临时空间不够导致任务失败。</p>
+<span id="more"></span>
+
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>业务方有一个同步 PG 的作业，数据量级大致是 1.5+ 亿条。任务执行失败，报错</p>
 <figure class="highlight stylus"><table><tr><td class="code"><pre><span class="line"><span class="number">2022</span>-<span class="number">10</span>-<span class="number">28</span> <span class="number">14</span>:<span class="number">31</span>:<span class="number">37.178</span> <span class="selector-attr">[flink-akka.actor.default-dispatcher-21]</span> INFO  org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.runtime</span><span class="selector-class">.executiongraph</span><span class="selector-class">.ExecutionGraph</span>  - Source: postgresqlreader (<span class="number">1</span>/<span class="number">1</span>) (<span class="number">77</span>bd8cb9299189456dceee9609b5d03a) switched from RUNNING to FAILED on org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.runtime</span><span class="selector-class">.jobmaster</span><span class="selector-class">.slotpool</span>.SingleLogicalSlot@<span class="number">55</span>bedd88.</span><br><span class="line">java<span class="selector-class">.lang</span><span class="selector-class">.IllegalArgumentException</span>: <span class="built_in">open</span>() failed<span class="selector-class">.ERROR</span>: temporary file size exceeds temp_file_limit (<span class="number">15728640</span>kB)</span><br><span class="line">	at com<span class="selector-class">.dtstack</span><span class="selector-class">.flinkx</span><span class="selector-class">.rdb</span><span class="selector-class">.inputformat</span><span class="selector-class">.JdbcInputFormat</span><span class="selector-class">.openInternal</span>(JdbcInputFormat<span class="selector-class">.java</span>:<span class="number">154</span>)</span><br><span class="line">	at com<span class="selector-class">.dtstack</span><span class="selector-class">.flinkx</span><span class="selector-class">.inputformat</span><span class="selector-class">.BaseRichInputFormat</span><span class="selector-class">.open</span>(BaseRichInputFormat<span class="selector-class">.java</span>:<span class="number">183</span>)</span><br><span class="line">	at com<span class="selector-class">.dtstack</span><span class="selector-class">.flinkx</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.functions</span><span class="selector-class">.source</span><span class="selector-class">.DtInputFormatSourceFunction</span><span class="selector-class">.run</span>(DtInputFormatSourceFunction<span class="selector-class">.java</span>:<span class="number">124</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.StreamSource</span><span class="selector-class">.run</span>(StreamSource<span class="selector-class">.java</span>:<span class="number">100</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.api</span><span class="selector-class">.operators</span><span class="selector-class">.StreamSource</span><span class="selector-class">.run</span>(StreamSource<span class="selector-class">.java</span>:<span class="number">63</span>)</span><br><span class="line">	at org<span class="selector-class">.apache</span><span class="selector-class">.flink</span><span class="selector-class">.streaming</span><span class="selector-class">.runtime</span><span class="selector-class">.tasks</span>.SourceStreamTask<span class="variable">$LegacySourceFunctionThread</span><span class="selector-class">.run</span>(SourceStreamTask<span class="selector-class">.java</span>:<span class="number">201</span>)</span><br><span class="line">Caused by: org<span class="selector-class">.postgresql</span><span class="selector-class">.util</span><span class="selector-class">.PSQLException</span>: ERROR: temporary file size exceeds temp_file_limit (<span class="number">15728640</span>kB)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.core</span><span class="selector-class">.v3</span><span class="selector-class">.QueryExecutorImpl</span><span class="selector-class">.receiveErrorResponse</span>(QueryExecutorImpl<span class="selector-class">.java</span>:<span class="number">2433</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.core</span><span class="selector-class">.v3</span><span class="selector-class">.QueryExecutorImpl</span><span class="selector-class">.processResults</span>(QueryExecutorImpl<span class="selector-class">.java</span>:<span class="number">2178</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.core</span><span class="selector-class">.v3</span><span class="selector-class">.QueryExecutorImpl</span><span class="selector-class">.execute</span>(QueryExecutorImpl<span class="selector-class">.java</span>:<span class="number">306</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.jdbc</span><span class="selector-class">.PgStatement</span><span class="selector-class">.executeInternal</span>(PgStatement<span class="selector-class">.java</span>:<span class="number">441</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.jdbc</span><span class="selector-class">.PgStatement</span><span class="selector-class">.execute</span>(PgStatement<span class="selector-class">.java</span>:<span class="number">365</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.jdbc</span><span class="selector-class">.PgStatement</span><span class="selector-class">.executeWithFlags</span>(PgStatement<span class="selector-class">.java</span>:<span class="number">307</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.jdbc</span><span class="selector-class">.PgStatement</span><span class="selector-class">.executeCachedSql</span>(PgStatement<span class="selector-class">.java</span>:<span class="number">293</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.jdbc</span><span class="selector-class">.PgStatement</span><span class="selector-class">.executeWithFlags</span>(PgStatement<span class="selector-class">.java</span>:<span class="number">270</span>)</span><br><span class="line">	at org<span class="selector-class">.postgresql</span><span class="selector-class">.jdbc</span><span class="selector-class">.PgStatement</span><span class="selector-class">.executeQuery</span>(PgStatement<span class="selector-class">.java</span>:<span class="number">224</span>)</span><br><span class="line">	at com<span class="selector-class">.dtstack</span><span class="selector-class">.flinkx</span><span class="selector-class">.rdb</span><span class="selector-class">.inputformat</span><span class="selector-class">.JdbcInputFormat</span><span class="selector-class">.executeQuery</span>(JdbcInputFormat<span class="selector-class">.java</span>:<span class="number">868</span>)</span><br><span class="line">	at com<span class="selector-class">.dtstack</span><span class="selector-class">.flinkx</span><span class="selector-class">.rdb</span><span class="selector-class">.inputformat</span><span class="selector-class">.JdbcInputFormat</span><span class="selector-class">.openInternal</span>(JdbcInputFormat<span class="selector-class">.java</span>:<span class="number">149</span>)</span><br><span class="line">	... <span class="number">5</span> common frames omitted</span><br></pre></td></tr></table></figure>
 <h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>这看起来就是 PG 数据库的问题，需要增加配置<code>temp_file_limit</code>。不过业务说 1.0 上可以执行，不放心用 2.0 的配置在 1.0 上手动提交了一个作业，居然可以。<br>从 2.0 的执行日志中获取了执行的 SQL</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> &quot;ts&quot;,&quot;asm_name&quot;,&quot;sequence&quot;,&quot;process_name&quot;,&quot;thread_name&quot;,&quot;pid&quot;,&quot;tid&quot;,&quot;energy_raw&quot;,&quot;uniform_time_ms&quot;,&quot;curr_time&quot; <span class="keyword">FROM</span> &quot;ctp_metrics27&quot; <span class="keyword">WHERE</span> <span class="number">1</span><span class="operator">=</span><span class="number">1</span>   <span class="keyword">and</span> &quot;curr_time&quot; <span class="operator">&gt;=</span> <span class="string">&#x27;2022-10-27 00:00:00.000000&#x27;</span> <span class="keyword">and</span> &quot;curr_time&quot; <span class="operator">&lt;</span> <span class="string">&#x27;2022-10-28 00:00:00.000000&#x27;</span> <span class="keyword">order</span> <span class="keyword">by</span> curr_time</span><br></pre></td></tr></table></figure>
@@ -25,12 +28,16 @@
   <entry>
     <title>flinkx 1.11 中使用远程 jar 遇到的问题与处理</title>
     <url>/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/</url>
-    <content><![CDATA[<p>随着任务不断迁移，datahub api 需要提交的任务也越来越多，带来的问题包括但不限于如下</p>
+    <content><![CDATA[<p>记录 flinkx 1.11 验证使用远程 jar 启动任务过程中遇到的问题和处理。</p>
+<span id="more"></span>
+
+<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>随着任务不断迁移，datahub api 需要提交的任务也越来越多，带来的问题包括但不限于如下</p>
 <ol>
 <li>客户端压力大，导致作业提交失败，之前发生过提交子进程内存耗尽</li>
 <li>大量任务同时上传文件到 HDFS，导致上传变慢，失败后重试，甚至上传失败</li>
 </ol>
-<p>之前优化了 jar 重复上传的问题，上周例会上龙哥也做了一件类似的事，将 flink lib 的目录下的 jar 上传到 hdfs，任务使用远程 jar ，这样可以省去本地上传的过程。由于 flinkx 作业几乎不会改动到 flink 的 jar 包，使用远程 jar 可以节省至少一半上传数据量。<br>接下来记录下验证过程中碰到的一个问题<br>虽然配置了远程的 jar 但是要把本地的 lib 目录清空了才不会上传。但是清空之后有个问题，任务启动失败报错有个类找不到。挨个尝试，最终发现要在本地 lib 目录中，保留以 Hadoop shaded jar 才行。<br><img src="/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/image_1666956868228_0.png" alt="image.png"><br>之所以会上传是因为 flinkx 在创建 yarndescriptor 时候，将 flink lib 目录中的 jar 添加到 ship files 中了，在执行 start app master 这个方法的时候 会把 ship files 中的文件上传。<br>后面发现添加配置项 <code>yarn.per-job-cluster.include-user-jar : FIRST</code> 后任务可以执行了，带来的变化是<br><img src="/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/image_1666956956724_0.png" alt="image.png"><br>但是这里有个问题，按类路径里的顺序 往后不是也能从 flinkx-release_1.11.0.jar 这个包里找到需要的类么？<br>第二天过来，按照类加载的顺序，看了这两个 jar ：<code>flinkx-hdfs-writer-release_1.11.0.jar</code> 和 <code>flinkx-release_1.11.0.jar</code>，发现问题了</p>
+<p>之前优化了 jar 重复上传的问题，上周例会上龙哥也做了一件类似的事，将 flink lib 的目录下的 jar 上传到 hdfs，任务使用远程 jar ，这样可以省去本地上传的过程。由于 flinkx 作业几乎不会改动到 flink 的 jar 包，使用远程 jar 可以节省至少一半上传数据量。<br>接下来记录下验证过程中碰到的一个问题</p>
+<h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><p>虽然配置了远程的 jar 但是要把本地的 lib 目录清空了才不会上传。但是清空之后有个问题，任务启动失败报错有个类找不到。挨个尝试，最终发现要在本地 lib 目录中，保留以 Hadoop shaded jar 才行。<br><img src="/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/image_1666956868228_0.png" alt="image.png"><br>之所以会上传是因为 flinkx 在创建 yarndescriptor 时候，将 flink lib 目录中的 jar 添加到 ship files 中了，在执行 start app master 这个方法的时候 会把 ship files 中的文件上传。<br>后面发现添加配置项 <code>yarn.per-job-cluster.include-user-jar : FIRST</code> 后任务可以执行了，带来的变化是<br><img src="/2022/10/30/flinkx-1-11-%E4%B8%AD%E4%BD%BF%E7%94%A8%E8%BF%9C%E7%A8%8B-jar-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E4%B8%8E%E5%A4%84%E7%90%86/image_1666956956724_0.png" alt="image.png"><br>但是这里有个问题，按类路径里的顺序 往后不是也能从 flinkx-release_1.11.0.jar 这个包里找到需要的类么？第二天过来，按照类加载的顺序，看了这两个 jar ：<code>flinkx-hdfs-writer-release_1.11.0.jar</code> 和 <code>flinkx-release_1.11.0.jar</code>，发现问题了</p>
 <ol>
 <li>不设置 FIRST ，会从 <code>flinkx-hdfs-writer-release_1.11.0.jar</code> 这个 jar 中加载到类，<code>org.apache.commons.cli.Option</code>。 这个类是 commons-cli 1.2 版本的，它的实现中没有 builder 这个方法。</li>
 <li>设置了 FIRST，会从 <code>flinkx-release_1.11.0.jar</code> 这个 jar 中加载 Option 类。这个 jar 中的 commons-cli 是 1.3.1 版本的，是有这个方法的。</li>
@@ -44,7 +51,10 @@
   <entry>
     <title>flinkx 1.7 jar 上传逻辑</title>
     <url>/2022/10/30/flinkx-1-7-jar-%E4%B8%8A%E4%BC%A0%E9%80%BB%E8%BE%91/</url>
-    <content><![CDATA[<p>flinkx 1.7 任务启动过程中要上传的 jar 分两部分</p>
+    <content><![CDATA[<p>之前在使用 flinkx 1.7 时，将插件的 jar 在 flink 的 lib 目录中也存放了一份，这样每次提交作业，用不上的 jar 也会上传，记录如何优化这个上传过程。</p>
+<span id="more"></span>
+
+<p>flinkx 1.7 任务启动过程中要上传的 jar 分两部分</p>
 <ol>
 <li>flink lib 目录下的 jar，又细分成两部分 flink-dist 和 非 flink-dist，以及<del>具体的 flinkx 插件 jar 包</del></li>
 <li>flinkx 插件目录下的 jar，又细分成 flinkx.jar （对应 flinkx-core 模块）和具体插件的 jar</li>
@@ -75,7 +85,10 @@
   <entry>
     <title>hive 读取超时</title>
     <url>/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/</url>
-    <content><![CDATA[<p>业务反馈 hive 读取作业执行失败<br><img src="/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/image-20220707143134989_1657247857902_0.png" alt="image-20220707143134989.png"><br>查看了这些失败作业，发现有些许作业是读超时了，异常栈如下</p>
+    <content><![CDATA[<p>介绍 JDBC 连接 Hive Server 的大致过程，以及如何设置读取超时。</p>
+<span id="more"></span>
+
+<p>业务反馈 hive 读取作业执行失败<br><img src="/2022/10/30/hive-%E8%AF%BB%E5%8F%96%E8%B6%85%E6%97%B6/image-20220707143134989_1657247857902_0.png" alt="image-20220707143134989.png"><br>查看了这些失败作业，发现有些许作业是读超时了，异常栈如下</p>
 <pre><code>Caused by: java.net.SocketTimeoutException: Read timed out
 at java.net.SocketInputStream.socketRead0(Native Method)
 at java.net.SocketInputStream.socketRead(SocketInputStream.java:116)
@@ -120,11 +133,16 @@ at org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:1
   <entry>
     <title>mongo 任务执行成功但数据量不对</title>
     <url>/2022/10/30/mongo-%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C%E6%88%90%E5%8A%9F%E4%BD%86%E6%95%B0%E6%8D%AE%E9%87%8F%E4%B8%8D%E5%AF%B9/</url>
-    <content><![CDATA[<p>业务反馈了一个同步 hive 数据到 mongo 的作业，同步结束后，mongo 里面的数据量与 hive 的对不上，任务运行日志中有 118 条记录写失败了。<br>初看这个任务有一点奇怪：flinkx 中有一个数据量的检测机制，如果写失败了，错误记录数或者错误记录比例超过一定阈值，作业就失败了。这个作业有记录写失败了，为什么还是成功的呢？带着这个疑惑，重新看了下错误检测机制，分为两个部分：初始化和校验</p>
-<p>在<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#open</code> 内部会调用方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#initStatisticsAccumulator</code>初始化累加器（比如错误记录数 <code>errCounter</code>），具体是通过 flink runtime 创建计数器，并将这些计数器添加到指标组中。</p>
+    <content><![CDATA[<p>记录 flinkx 中 mongo 同步任务由于错误设置问题导致的任务应当失败而未失败的问题。</p>
+<span id="more"></span>
+
+<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>业务反馈了一个同步 hive 数据到 mongo 的作业，同步结束后，mongo 里面的数据量与 hive 的对不上，任务运行日志中有 118 条记录写失败了。</p>
+<h1 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h1><p>初看这个任务有一点奇怪：flinkx 中有一个数据量的检测机制，如果写失败了，错误记录数或者错误记录比例超过一定阈值，作业就失败了。这个作业有记录写失败了，为什么还是成功的呢？带着这个疑惑，重新看了下错误检测机制，分为两个部分：初始化和校验</p>
+<h2 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h2><p>在<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#open</code> 内部会调用方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#initStatisticsAccumulator</code>初始化累加器（比如错误记录数 <code>errCounter</code>），具体是通过 flink runtime 创建计数器，并将这些计数器添加到指标组中。</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">initStatisticsAccumulator</span><span class="params">()</span>&#123;</span><br><span class="line">  errCounter = context.getLongCounter(Metrics.NUM_ERRORS);</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">  outputMetric = <span class="keyword">new</span> <span class="title class_">BaseMetric</span>(context);</span><br><span class="line">  outputMetric.addMetric(Metrics.NUM_ERRORS, errCounter);</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">  startTime = System.currentTimeMillis();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>然后调用方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#initAccumulatorCollector</code>初始话计数器收集器<code>accumulatorCollector</code>，内部会启动一个定时任务，执行方法<code>com.dtstack.flinkx.metrics.AccumulatorCollector#collectAccumulatorWithApi</code>从 JM 获取计数器的值。<br>校验过程有两处：每一行数据写之前；以及所有数据写完。<br>写之前是在方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#writeSingleRecord</code>中</p>
+<p>然后调用方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#initAccumulatorCollector</code>初始话计数器收集器<code>accumulatorCollector</code>，内部会启动一个定时任务，执行方法<code>com.dtstack.flinkx.metrics.AccumulatorCollector#collectAccumulatorWithApi</code>从 JM 获取计数器的值。</p>
+<h2 id="校验"><a href="#校验" class="headerlink" title="校验"></a>校验</h2><p>校验过程有两处：每一行数据写之前；以及所有数据写完。<br>写之前是在方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#writeSingleRecord</code>中</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">writeSingleRecord</span><span class="params">(Row row)</span> &#123;</span><br><span class="line">  <span class="keyword">if</span>(errorLimiter != <span class="literal">null</span>) &#123;</span><br><span class="line">    errorLimiter.acquire();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    writeSingleRecordInternal(row);</span><br><span class="line">  &#125; </span><br><span class="line">  <span class="comment">//...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>这里先调用方法<code>com.dtstack.flinkx.writer.ErrorLimiter#acquire</code>获取错误的情况，</p>
@@ -133,8 +151,10 @@ at org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:1
 <p>从计数器收集器<code>accumulatorCollector</code>中获取错误数<code>errors</code>和错误比例（错误数&#x2F;读取数）<code>errorRatio = (**double**) errors / numRead</code>。如果超过最大错误数<code>maxErrors</code>或者最大错误比例<code>maxErrorRatio</code>，抛出异常。<br>由于上面的检测是在写之前，对于最后一次写，还是有可能失败的，所以写完之后，又有一次检测，也是调用方法<code>com.dtstack.flinkx.writer.ErrorLimiter#acquire</code>。具体是在方法<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#checkErrorLimit</code>中，由<code>com.dtstack.flinkx.outputformat.BaseRichOutputFormat#close</code>方法调用。<br>至此，错误检测机制说明白了。那为什么没有生效呢？可能的原因就是检测条件不成立，即<code>maxErrors</code>为 null 或者 0；<code>maxErrorRatio</code> 为 null。顺着这个思路找到这两个值初始化的源头，<code>com.dtstack.flinkx.mongodb.writer.MongodbWriter#writeData</code></p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> DataStreamSink&lt;?&gt; writeData(List&lt;DataStream&lt;Row&gt;&gt; dataSets) &#123;</span><br><span class="line">  <span class="type">MongodbOutputFormatBuilder</span> <span class="variable">builder</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">MongodbOutputFormatBuilder</span>();</span><br><span class="line"></span><br><span class="line">  builder.setMongodbConfig(mongodbConfig);</span><br><span class="line">  builder.setColumns(columns);</span><br><span class="line">  builder.setMonitorUrls(monitorUrls);</span><br><span class="line">  builder.setErrors(errors);</span><br><span class="line">  builder.setDirtyPath(dirtyPath);</span><br><span class="line">  builder.setDirtyHadoopConfig(dirtyHadoopConfig);</span><br><span class="line">  builder.setSrcCols(srcCols);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> createOutput(dataSets, builder.finish());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>看到这里处理了 <code>errors</code>，没有处理<code>errorRatio</code>。而<code>errors</code>是从南天门给的配置中获取的，取值为 0。如此两个检测条件都不成立，所以任务没有失败。</p>
+<p>看到这里处理了 <code>errors</code>，没有处理<code>errorRatio</code>。而<code>errors</code>是从配置中获取的，取值为 0。如此两个检测条件都不成立，所以任务没有失败。</p>
 <figure class="highlight json"><table><tr><td class="code"><pre><span class="line"><span class="attr">&quot;errorLimit&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;percentage&quot;</span><span class="punctuation">:</span> <span class="number">0.01</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;record&quot;</span><span class="punctuation">:</span> <span class="number">0</span></span><br><span class="line"><span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="处理"><a href="#处理" class="headerlink" title="处理"></a>处理</h1><p>在方法<code>com.dtstack.flinkx.mongodb.writer.MongodbWriter#writeData</code>中设置<code>errorRatio</code> 或者在创建配置时将<code>errorLimit.record</code>设置为 1。</p>
 ]]></content>
       <tags>
         <tag>flinkx</tag>
@@ -144,7 +164,10 @@ at org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:1
   <entry>
     <title>连不上 HS2</title>
     <url>/2022/10/30/%E8%BF%9E%E4%B8%8D%E4%B8%8A-HS2/</url>
-    <content><![CDATA[<p>作业执行失败报错如下  </p>
+    <content><![CDATA[<p>介绍 JDBC 连接 Hive Server 过程中，通过 ZK 实现高可用的逻辑。</p>
+<span id="more"></span>
+
+<p>作业执行失败报错如下  </p>
 <figure class="highlight css"><table><tr><td class="code"><pre><span class="line">Tried <span class="attribute">all</span> existing HiveServer2 uris <span class="selector-tag">from</span> ZooKeeper.</span><br></pre></td></tr></table></figure>
 
 <p>目前 HS2 通过 ZK 做了 HA，从报错日志看，将 ZK 里面配置的 HS2 依次连接了一遍，都失败了。过往的经验是有两个可能的问题</p>
@@ -191,7 +214,10 @@ at org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:1
   <entry>
     <title>streamis-作业执行过程源码</title>
     <url>/2022/10/30/streamis-%E4%BD%9C%E4%B8%9A%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B%E6%BA%90%E7%A0%81/</url>
-    <content><![CDATA[<h2 id="执行流程"><a href="#执行流程" class="headerlink" title="执行流程"></a>执行流程</h2><pre class="mermaid">flowchart TD
+    <content><![CDATA[<p>记录 streamis 作业执行流程</p>
+<span id="more"></span>
+
+<h2 id="执行流程"><a href="#执行流程" class="headerlink" title="执行流程"></a>执行流程</h2><pre class="mermaid">flowchart TD
 构建单次作业 --> 提交创建引擎
 提交创建引擎 --> 获取引擎信息
 获取引擎信息 --> 更新作业状态</pre>
@@ -210,10 +236,6 @@ at org.apache.thrift.transport.TIOStreamTransport.read(TIOStreamTransport.java:1
 <p>类<code>TaskMonitorService</code> 中有个定时任务，从数据库中获取未完成的任务，根据任务的 <code>engineConnId</code>从映射中拿到<code>SubmittableSimpleOnceJob</code>实例，内部会创建一个<code>GetEngineConnAction</code>，有 linkis 客户端发起请求，获取节点信息，里面包含了引擎的状态。</p>
 </li>
 </ol>
-<span id="more"></span>
-
-
-
 <h2 id="任务执行-API-入口"><a href="#任务执行-API-入口" class="headerlink" title="任务执行 API 入口"></a>任务执行 API 入口</h2><pre class="mermaid">sequenceDiagram
 activate JobRestfulApi
 JobRestfulApi ->> JobRestfulApi : 判断用户对于作业的权限
@@ -381,7 +403,7 @@ deactivate FlinkJobManager</pre>
 <h4 id="linkis-客户端请求创建EngineConn"><a href="#linkis-客户端请求创建EngineConn" class="headerlink" title="linkis 客户端请求创建EngineConn"></a>linkis 客户端请求创建EngineConn</h4><p><code>org.apache.linkis.computation.client.once.simple.SubmittableSimpleOnceJob#doSubmit</code></p>
 <figure class="highlight scala"><table><tr><td class="code"><pre><span class="line"><span class="keyword">override</span> <span class="keyword">protected</span> <span class="function"><span class="keyword">def</span> <span class="title">doSubmit</span></span>(): <span class="type">Unit</span> = &#123;</span><br><span class="line">    info(<span class="string">s&quot;Ready to create a engineConn: <span class="subst">$&#123;createEngineConnAction.getRequestPayload&#125;</span>.&quot;</span>)</span><br><span class="line">    <span class="keyword">val</span> nodeInfo = linkisManagerClient.createEngineConn(createEngineConnAction)</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>其中<code>linkisManagerClient.createEngineConn(createEngineConnAction)</code>最终会调用到<code>org.apache.linkis.httpclient.AbstractHttpClient#execute</code>，这里的逻辑在 [源码-linkis 之BML物料上传与下载.md](源码-linkis 之BML物料上传与下载.md) 有做介绍。</p>
+<p>其中<code>linkisManagerClient.createEngineConn(createEngineConnAction)</code>最终会调用到<code>org.apache.linkis.httpclient.AbstractHttpClient#execute</code>，这里的逻辑在源码-linkis 之BML物料上传与下载有做介绍。</p>
 <p>请求的接口路径是这样确定的</p>
 <figure class="highlight scala"><table><tr><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="function"><span class="keyword">def</span> <span class="title">prepareReq</span></span>(requestAction: <span class="type">HttpAction</span>): <span class="type">HttpRequestBase</span> = &#123;</span><br><span class="line">    <span class="keyword">var</span> realURL = <span class="string">&quot;&quot;</span></span><br><span class="line">    requestAction <span class="keyword">match</span> &#123;</span><br><span class="line">        <span class="keyword">case</span> serverUrlAction: <span class="type">ServerUrlAction</span> =&gt;</span><br><span class="line">        realURL = connectUrl(serverUrlAction.serverUrl, requestAction.getURL)</span><br><span class="line">        <span class="keyword">case</span> _ =&gt;</span><br><span class="line">        realURL = getRequestUrl(requestAction.getURL, requestAction.getRequestBody)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -482,18 +504,22 @@ deactivate TaskService</pre>
   <entry>
     <title>日志门面混用下的格式问题</title>
     <url>/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/</url>
-    <content><![CDATA[<p>flinkx 1.11 提交中日志中有个问题：</p>
+    <content><![CDATA[<p>介绍了日志门面 ACL 和 SLF4J 混用带来的问题和处理过程</p>
+<span id="more"></span>
+
+<h1 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h1><p>flinkx 1.11 提交中日志中有个问题：</p>
 <p><img src="/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/image-20221105143311217.png" alt="image-20221105143311217">  </p>
-<p>输出日志中既有 log4j 也有 logback。为什么会这样呢？  当时为了验证会使用哪个配置文件，在 flinkx-launcher 的资源目录中放了 3 个日志配置文件  </p>
+<p>输出日志中既有 log4j 也有 logback。</p>
+<h1 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h1><p>当初为了验证会使用哪个日志配置文件，在 flinkx-launcher 的资源目录中放了 3 个日志配置文件  </p>
 <p><img src="/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/image-20221105143644773.png" alt="image-20221105143644773"></p>
-<p>其中 log4j 和 logback 的 layout 配置中分别设置了 log4j 和 logback 字样。从上面的 launcher 的启动日志中，惊奇的发现使用了两个日志配置文件，说明使用了两个日志实现框架，为什么会这样呢？<br>其中 log4j 对应的日志是  </p>
+<p>其中 log4j 和 logback 的 layout 配置中分别设置了 log4j 和 logback 字样。从上面的 launcher 的启动日志中，发现使用了两个日志配置文件，说明使用了两个日志实现框架，为什么会这样呢？<br>其中 log4j 对应的日志是  </p>
 <figure class="highlight stylus"><table><tr><td class="code"><pre><span class="line"><span class="number">2022</span>-<span class="number">07</span>-<span class="number">29</span> <span class="number">15</span>:<span class="number">07</span>:<span class="number">40</span>,<span class="number">903</span> log4j - <span class="number">0</span>    WARN  <span class="selector-attr">[main]</span> org<span class="selector-class">.apache</span><span class="selector-class">.hadoop</span><span class="selector-class">.util</span><span class="selector-class">.NativeCodeLoader</span>:Unable to load native-hadoop library <span class="keyword">for</span> your platform... using builtin-java classes where applicable</span><br><span class="line"><span class="number">2022</span>-<span class="number">07</span>-<span class="number">29</span> <span class="number">15</span>:<span class="number">07</span>:<span class="number">43</span>,<span class="number">483</span> log4j - <span class="number">2580</span> INFO  <span class="selector-attr">[main]</span> org<span class="selector-class">.apache</span><span class="selector-class">.hadoop</span><span class="selector-class">.yarn</span><span class="selector-class">.client</span><span class="selector-class">.api</span><span class="selector-class">.impl</span><span class="selector-class">.YarnClientImpl</span>:Submitted application application_1644979452149_289296</span><br></pre></td></tr></table></figure>
 <p>看了类<code>org.apache.hadoop.yarn.client.api.impl.YarnClientImpl</code>中 logger 对象的获取，它是从 Apache Common Logging 中获取的（类<code>org.apache.commons.logging.LogFactory;</code>）。</p>
 <blockquote>
 <p>关于 ACL 的解释，见文章<a href="https://segmentfault.com/a/1190000041422727">5分钟搞定混乱的Java日志体系</a>：  2002年8月Apache推出了JCL（Jakarta Commons Logging），也就是日志抽象层，支持运行时动态加载日志组件的实现，当然也提供一个默认实现Simple Log（在ClassLoader中进行查找，如果能找到Log4j则默认使用log4j实现，如果没有则使用JUL 实现，再没有则使用JCL内部提供的Simple Log实现）。  </p>
 </blockquote>
 <p>一句话 ACL 是一个类似 slf4j 的门面，默认使用 log4j。  看到这里，有一个猜测：既然 ACL 默认使用 log4j，类路径中存在 log4j 的 jar 包，上面日志中出现 log4j 就对了。</p>
-<p>接下来要做的是：把 flinkx 工程里面的 log4j 全部排掉，只保留 logback，同时引入一个 ACL 到 slf4j 的转换包，用于支持需要使用 ACL 的逻辑。<del>此外：slf4j-log4j12 是 hive 的依赖中引入的，通过 exclude 方法没法排除，考虑使用 shade 插件来做排除。</del>重新打包上传，执行看提交日志</p>
+<h1 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h1><p>接下来要做的是：把 flinkx 工程里面的 log4j 全部排掉，只保留 logback，同时引入一个 ACL 到 slf4j 的转换包，用于支持需要使用 ACL 的逻辑。<del>此外：slf4j-log4j12 是 hive 的依赖中引入的，通过 exclude 方法没法排除，考虑使用 shade 插件来做排除。</del>重新打包上传，执行看提交日志</p>
 <p><img src="/2022/11/05/%E6%97%A5%E5%BF%97%E9%97%A8%E9%9D%A2%E6%B7%B7%E7%94%A8%E4%B8%8B%E7%9A%84%E6%A0%BC%E5%BC%8F%E9%97%AE%E9%A2%98/image-20221105143819305.png" alt="image-20221105143819305">  </p>
 <p>从中可以看到之前的日志中 log4j 字样变成了 logback，说明之前的想法是对的。</p>
 ]]></content>
